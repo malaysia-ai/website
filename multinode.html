@@ -49,40 +49,42 @@
     <h2>How to multi node</h2>
 
     <p></p>
-    <p>```bash<br>ray start --head --port=6379 --dashboard-host=0.0.0.0<br>```</p>
-    <p>```bash<br>ray start --address=HEAD_NODE_IP:6379<br>```</p>
-    <p>```bash<br>
-        import requests<br>
-   
-        from starlette.requests import Request<br>
+    <pre><code>
+```bash
+ray start --head --port=6379 --dashboard-host=0.0.0.0
+ray start --address=HEAD_NODE_IP:6379
+```
+    </code></pre>
+    <pre><code>
+```python
+import requests
+from starlette.requests import Request
+from typing import Dict
+from transformers import pipeline 
+from ray import serve 
+
+# 1: Wrap the pretrained sentiment analysis model in a Serve deployment. 
+@serve.deployment( 
+    num_replicas=2, 
+) 
+class TranslationDeployment: 
+    def __init__(self): 
+        self._model = pipeline("translation", model="google/flan-t5-large", device="cuda") 
         
-        from typing import Dict<br>
+    def __call__(self, request: Request) -> Dict: 
+        return self._model(request.query_params["text"])[0] 
         
-        from transformers import pipeline <br>
-        
-        from ray import serve <br>
-        <br>
-        # 1: Wrap the pretrained sentiment analysis model in a Serve deployment. <br>
-        @serve.deployment( <br>
-            num_replicas=2, <br>
-        ) <br>
-        class TranslationDeployment: <br>
-            def __init__(self): <br>
-                self._model = pipeline("translation", model="google/flan-t5-large", device="cuda") <br>
-                <br>
-            def __call__(self, request: Request) -> Dict: <br>
-                return self._model(request.query_params["text"])[0] <br>
-                <br>
-        # 2: Deploy the deployment. <br>
-        serve.run(TranslationDeployment.bind(), route_prefix="/") <br>
-        <br>
-        # 3: Query the deployment and print the result. <br>
-        print( <br>
-            requests.get( <br>
-                "http://localhost:8000/", params={"text": "Ray Serve is great!"} <br>
-            ).json() <br>
-        )     <br>
-    <br>```</p>
+# 2: Deploy the deployment. 
+serve.run(TranslationDeployment.bind(), route_prefix="/") 
+
+# 3: Query the deployment and print the result. 
+print( 
+    requests.get( 
+        "http://localhost:8000/", params={"text": "Ray Serve is great!"} 
+    ).json() 
+)
+```
+    </code></pre>
     <p>If you dont understand, doesnt mean you have skill issue, you just haven't started yet.</p>
     <p>thats all, give some love to husein, kamarul and ariff. we are gay.</p>
   </div>
