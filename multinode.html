@@ -1,0 +1,90 @@
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="description" content="Malaysia-AI blog">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:site" content="@oscarnazhan">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="twitter:image" content="https://i.imgur.com/8Vi14Dc.png">
+  <meta name="og:image" content="https://i.imgur.com/8Vi14Dc.png">
+  <meta name="keywords"
+    content="Contact Malaysia AI, AI experts Malaysia, AI consultation Malaysia, Malaysia AI, artificial intelligence Malaysia, my ai, open source malaysia ai">
+
+  <style>
+    body {
+      line-height: 1.4;
+      font-size: 16px;
+      padding: 0 10px;
+      margin: 50px auto;
+      max-width: 650px;
+    }
+
+    #maincontent {
+      max-width: 42em;
+      margin: 15 auto;
+    }
+  </style>
+  <meta name="secret"
+    content="if you read this, aisyah is a lovely person, kamarul such a nice person, ariff nazhan happy go lucky, mindscape such goated, love them all, if you guys meet them, please keep them, do not let go!">
+
+  <title>Malaysia-AI blog</title>
+</head>
+
+<body>
+  <!-- hack SEO ftw -->
+  <div hidden>
+    <h1>About Malaysia AI</h1>
+    <h2>Our Mission and Vision</h2>
+    <h3>Our Team</h3>
+  </div>
+
+  <div hidden>
+    <h1>Contact Malaysia AI</h1>
+    <h2>Get in Touch</h2>
+    <h3>Our Office Locations</h3>
+  </div>
+
+  <div id="maincontent" style="margin-top: 70px">
+    <h2>How to multi node</h2>
+
+    <p></p>
+    <p>```bash<br>ray start --head --port=6379 --dashboard-host=0.0.0.0<br>```</p>
+    <p>```bash<br>ray start --address=HEAD_NODE_IP:6379<br>```</p>
+    <p>```bash<br>
+        import requests<br>
+   
+        from starlette.requests import Request<br>
+        
+        from typing import Dict<br>
+        
+        from transformers import pipeline <br>
+        
+        from ray import serve <br>
+        <br>
+        # 1: Wrap the pretrained sentiment analysis model in a Serve deployment. <br>
+        @serve.deployment( <br>
+            num_replicas=2, <br>
+        ) <br>
+        class TranslationDeployment: <br>
+            def __init__(self): <br>
+                self._model = pipeline("translation", model="google/flan-t5-large", device="cuda") <br>
+                <br>
+            def __call__(self, request: Request) -> Dict: <br>
+                return self._model(request.query_params["text"])[0] <br>
+                <br>
+        # 2: Deploy the deployment. <br>
+        serve.run(TranslationDeployment.bind(), route_prefix="/") <br>
+        <br>
+        # 3: Query the deployment and print the result. <br>
+        print( <br>
+            requests.get( <br>
+                "http://localhost:8000/", params={"text": "Ray Serve is great!"} <br>
+            ).json() <br>
+        )     <br>
+    <br>```</p>
+    <p>If you dont understand, doesnt mean you have skill issue, you just haven't started yet.</p>
+    <p>thats all, give some love to husein, kamarul and ariff. we are gay.</p>
+  </div>
+</body>
+</html>
