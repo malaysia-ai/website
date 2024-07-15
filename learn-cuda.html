@@ -1,0 +1,80 @@
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- HTML Meta Tags -->
+  <title>Malaysia-AI blog learn CUDA</title>
+  <meta name="description" content="Malaysia-AI blog learn CUDA">
+
+  <!-- Facebook Meta Tags -->
+  <meta property="og:url" content="https://malaysia-ai.org/learn-cuda">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Malaysia-AI blog learn CUDA">
+  <meta property="og:description" content="Malaysia-AI blog learn CUDA">
+  <meta property="og:image" content="https://malaysia-ai.org/learn-cuda.png">
+
+  <!-- Twitter Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="twitter:domain" content="malaysia-ai.org">
+  <meta property="twitter:url" content="https://malaysia-ai.org/learn-cuda">
+  <meta name="twitter:title" content="Malaysia-AI blog learn CUDA">
+  <meta name="twitter:description" content="Malaysia-AI blog learn CUDA">
+  <meta name="twitter:image" content="https://malaysia-ai.org/learn-cuda.png">
+
+  <!-- Meta Tags Generated via https://www.opengraph.xyz -->
+
+  <style>
+    body {
+      line-height: 1.4;
+      font-size: 16px;
+      padding: 0 10px;
+      margin: 50px auto;
+      max-width: 1000px;
+    }
+
+    #maincontent {
+      max-width: 62em;
+      margin: 15 auto;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="maincontent" style="margin-top: 70px">
+    <h2>learn CUDA</h2>
+
+    <p>CUDA is hard to learn to be honest, and if you read <a
+        href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/">https://docs.nvidia.com/cuda/cuda-c-programming-guide/</a>,
+      things can be complicated, which is true, CUDA is complicated.
+    </p>
+    <p>That guide is good to be honest, but if you are totally new, nothing you can run there, for example from <a
+        href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/#kernels">https://docs.nvidia.com/cuda/cuda-c-programming-guide/#kernels</a>,
+    </p>
+    <pre style="margin-top:0px; white-space:break-spaces;">
+```cuda
+// Kernel definition
+__global__ void VecAdd(float* A, float* B, float* C)
+{
+    int i = threadIdx.x;
+    C[i] = A[i] + B[i];
+}
+
+int main()
+{
+    ...
+    // Kernel invocation with N threads
+    VecAdd<<<1, N>>>(A, B, C);
+    ...
+}
+```
+    </pre>
+    <p>What is this `__global__`, `threadIdx` and `<<<>>>` operations right?</p>
+    <br>
+    <p>---</p>
+    <p>thats all, give some love to Aisyah Razak.</p>
+  </div>
+</body>
+
+</html>
