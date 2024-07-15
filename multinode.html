@@ -46,15 +46,22 @@
   </div>
 
   <div id="maincontent" style="margin-top: 70px">
-    <h2>How to multi node</h2>
+    <h2>multi-nodes GPUs Ray serving</h2>
 
-    <p></p>
-    <pre><code>
+    <p>Turns out, to serve a model on different N machines is super simple using Ray, just make sure all machines
+      already installed Ray, and 1 machine run as head and another machines run as workers,</p>
+    <p style="margin-bottom:0px">For head,</p>
+    <pre style="margin-top:0px">
 ```bash
 ray start --head --port=6379 --dashboard-host=0.0.0.0
+```</pre>
+    <p style="margin-bottom:0px">For worker,</p>
+    <pre style="margin-top:0px">
+```bash
 ray start --address=HEAD_NODE_IP:6379
-```
-
+```</pre>
+    <p style="margin-bottom:0px">After that you can just start with `serve.deployment` with custom `__init__`,</p>
+    <pre>
 ```python
 import requests
 from starlette.requests import Request
@@ -83,16 +90,28 @@ print(
         "http://localhost:8000/", params={"text": "Ray Serve is great!"} 
     ).json() 
 )
-```
-    </code></pre>
-    <p>Few tips.</p>
-    <p>The master node needs to run on a linux based operating system.</p>
-    <p>The master node needs to use the argument `ray_actor_options` to allow ray to utilise the GPU on the master node.</p>
-    <p>To have multiple replica sets, use the argument `num_replicas` in the master node.</p>
+```</pre>
+    <p>1. The head will pickled the object and send to it to each replicas.</p>
+    <p>2. To have multiple replica sets, use the argument `num_replicas` in the master node.</p>
+    <p>3. The replicas can be the head itself and the workers.</p>
+    <p>4. The code execution can be anywhere, not necessary inside the head, but the default ray serve connect to
+      `localhost:6379`.</p>
+    <p>5. The master node needs to run on a linux based operating system.</p>
+    <p>6. The master node needs to use the argument `ray_actor_options` to allow ray to utilise the GPU on the master
+      node.
+    </p>
+    <h3>How to make it better?</h3>
+    <p>If you look at the source code, we are serving Encoder-Decoder model, which is Flan T5 Large.</p>
+    <p>When we talk about Encoder-Decoder model, the causal happened on Decoder side, and inferencing causal just a
+      continuous loop until reached max length or EOS token.</p>
+    <p>Serving like this, it is not efficient for concurrency because GPUs are designed to perform same operation on a
+      batch manner, plus too much processing switching happened between for different requests.</p>
+    <p>So what we need to do is to micro-batch the requests, but the micro-batch must happened during causal loop, this
+      called continuous batching.</p>
     <br>
     <p>---</p>
-    <p>If you dont understand, doesnt mean you have skill issue, you just haven't started yet.</p>
-    <p>thats all, give some love to husein, kamarul and ariff. we are gay.</p>
+    <p>thats all, give some love to Aisyah Razak.</p>
   </div>
 </body>
+
 </html>
