@@ -71,7 +71,16 @@ int main()
 ```
     </pre>
     <p>What is this `__global__`, `threadIdx` and `<<<>>>` operations right?</p>
-    <br>
+    <p>1. `__global__` reserved for kernel, <a
+        href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global">https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global</a>
+    </p>
+    <p>2. `threadIdx` is programming representation for threads in CUDA, <a
+        href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/#thread-hierarchy">https://docs.nvidia.com/cuda/cuda-c-programming-guide/#thread-hierarchy</a>
+    </p>
+    <p>3. `<<<>>>` is to invoke kernel operation, <a
+          href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#kernels">https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#kernels</a>
+    </p>
+    <p>You read it you will understand, this is thing is hard but that is the whole point of CUDA.</p>
     <p>---</p>
     <p>thats all, give some love to Aisyah Razak.</p>
   </div>
