@@ -51,17 +51,17 @@
     <p>Turns out, to serve a model on different N machines is super simple using Ray, just make sure all machines
       already installed Ray, and 1 machine run as head and another machines run as workers,</p>
     <p style="margin-bottom:0px">For head,</p>
-    <pre style="margin-top:0px">
+    <pre style="margin-top:0px; white-space:break-spaces;">
 ```bash
 ray start --head --port=6379 --dashboard-host=0.0.0.0
 ```</pre>
     <p style="margin-bottom:0px">For worker,</p>
-    <pre style="margin-top:0px">
+    <pre style="margin-top:0px; white-space:break-spaces;">
 ```bash
 ray start --address=HEAD_NODE_IP:6379
 ```</pre>
     <p style="margin-bottom:0px">After that you can just start with `serve.deployment` with custom `__init__`,</p>
-    <pre>
+    <pre style="white-space:break-spaces;">
 ```python
 import requests
 from starlette.requests import Request
