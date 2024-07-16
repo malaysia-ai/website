@@ -37,6 +37,11 @@
       max-width: 62em;
       margin: 15 auto;
     }
+
+    pre {
+      margin-top: 0px;
+      white-space: break-spaces;
+    }
   </style>
 </head>
 
@@ -49,10 +54,10 @@
         href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/">https://docs.nvidia.com/cuda/cuda-c-programming-guide/</a>,
       things can be complicated, which is true, CUDA is complicated.
     </p>
-    <p>That guide is good to be honest, but if you are totally new, nothing you can run there, for example from <a
+    <p>That guide is good actually, but if you are totally new, nothing you can run there, for example from <a
         href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/#kernels">https://docs.nvidia.com/cuda/cuda-c-programming-guide/#kernels</a>,
     </p>
-    <pre style="margin-top:0px; white-space:break-spaces;">
+    <pre>
 ```cuda
 // Kernel definition
 __global__ void VecAdd(float* A, float* B, float* C)
@@ -70,17 +75,331 @@ int main()
 }
 ```
     </pre>
-    <p>What is this `__global__`, `threadIdx` and `<<<>>>` operations right?</p>
-    <p>1. `__global__` reserved for kernel, <a
-        href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global">https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global</a>
+    <p>So, let's try to complete it,</p>
+    <pre>
+```cuda
+#include <stdio.h>
+#include <cuda_runtime.h>
+
+// Kernel definition
+__global__ void VecAdd(float* A, float* B, float* C)
+{
+    int i = threadIdx.x;
+    C[i] = A[i] + B[i];
+}
+
+int main()
+{
+    int N = 1000000;
+    size_t size = N * sizeof(float);
+
+    // h == host == cpu
+    float *h_a, *h_b, *h_c;
+    
+    // d == device == gpu
+    float *d_a, *d_b, *d_c;
+    
+    h_a = (float*)malloc(size);
+    h_b = (float*)malloc(size);
+    h_c = (float*)malloc(size);
+    
+    for (int i = 0; i < N; i++) {
+        h_a[i] = i;
+        h_b[i] = i * 2;
+    }
+    
+    cudaMalloc(&d_a, size);
+    cudaMalloc(&d_b, size);
+    cudaMalloc(&d_c, size);
+    
+    cudaMemcpy(d_a, h_a, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, h_b, size, cudaMemcpyHostToDevice);
+
+
+    // Kernel invocation with N threads
+    VecAdd<<<1, N>>>(d_a, d_b, d_c);
+
+    cudaMemcpy(h_c, d_c, size, cudaMemcpyDeviceToHost);
+    
+    free(h_a); free(h_b); free(h_c);
+    cudaFree(d_a); cudaFree(d_b); cudaFree(d_c);
+}
+```</pre>
+    <p>Save it as `test.cu`, and then you can continue to compile,</p>
+    <pre>
+```bash
+nvcc test.cu -o test
+./test
+```</pre>
+    <p>Others are just standard C++ operations, we are only going to focus for CUDA extensions only,</p>
+    <p>1. for `VecAdd<<<1, N>>>`, first parameter `1`, this means, 1 block allocated only.</p>
+    <p>2. for `VecAdd<<<1, N>>>`, second parameter `N`, this means, N thread allocated in 1 block.</p>
+    <p>3. A thread is to execute one operation, plus, minus, etc. 1000000 threads means 1000000 operations can be done
+      simultaneously, logically, but physically not.</p>
+    <p>4. For those experienced in CUDA, 1000000 threads in a single block is no-brainer and the code is not going to
+      work as intended, here is why,</p>
+    <pre>
+```bash
+git clone https://github.com/NVIDIA/cuda-samples
+cd cuda-samples/Samples/1_Utilities/deviceQuery
+make
+./deviceQuery
+```</pre>
+    <p>below is the output,</p>
+    <pre>
+```
+Device 0: "NVIDIA GeForce RTX 3090 Ti"
+CUDA Driver Version / Runtime Version          12.5 / 12.1
+CUDA Capability Major/Minor version number:    8.6
+Total amount of global memory:                 24149 MBytes (25322520576 bytes)
+(084) Multiprocessors, (128) CUDA Cores/MP:    10752 CUDA Cores
+GPU Max Clock rate:                            1935 MHz (1.93 GHz)
+Memory Clock rate:                             10501 Mhz
+Memory Bus Width:                              384-bit
+L2 Cache Size:                                 6291456 bytes
+Maximum Texture Dimension Size (x,y,z)         1D=(131072), 2D=(131072, 65536), 3D=(16384, 16384, 16384)
+Maximum Layered 1D Texture Size, (num) layers  1D=(32768), 2048 layers
+Maximum Layered 2D Texture Size, (num) layers  2D=(32768, 32768), 2048 layers
+Total amount of constant memory:               65536 bytes
+Total amount of shared memory per block:       49152 bytes
+Total shared memory per multiprocessor:        102400 bytes
+Total number of registers available per block: 65536
+Warp size:                                     32
+Maximum number of threads per multiprocessor:  1536
+Maximum number of threads per block:           1024
+Max dimension size of a thread block (x,y,z): (1024, 1024, 64)
+Max dimension size of a grid size    (x,y,z): (2147483647, 65535, 65535)
+Maximum memory pitch:                          2147483647 bytes
+Texture alignment:                             512 bytes
+Concurrent copy and kernel execution:          Yes with 2 copy engine(s)
+Run time limit on kernels:                     No
+Integrated GPU sharing Host Memory:            No
+Support host page-locked memory mapping:       Yes
+Alignment requirement for Surfaces:            Yes
+Device has ECC support:                        Disabled
+Device supports Unified Addressing (UVA):      Yes
+Device supports Managed Memory:                Yes
+Device supports Compute Preemption:            Yes
+Supports Cooperative Kernel Launch:            Yes
+Supports MultiDevice Co-op Kernel Launch:      Yes
+Device PCI Domain ID / Bus ID / location ID:   0 / 1 / 0
+Compute Mode:
+    < Default (multiple host threads can use ::cudaSetDevice() with device simultaneously) >
+```</pre>
+    <p>Look at,</p>
+    <pre>
+```
+(084) Multiprocessors, (128) CUDA Cores/MP:    10752 CUDA Cores
+Maximum number of threads per multiprocessor:  1536
+Maximum number of threads per block:           1024
+Max dimension size of a thread block (x,y,z): (1024, 1024, 64)
+Max dimension size of a grid size    (x,y,z): (2147483647, 65535, 65535)
+```</pre>
+    <p>- Max blocks my GPU can initiate is 2147483647 blocks.</p>
+    <p>- Each blocks max 1024 threads.</p>
+    <p>- Each CUDA core max 1536 threads simultaneously only.</p>
+    <p>- 84 multiprocessors, each got 128 CUDA cores.</p>
+    <p>- 10752 * 1536 = 16515072 threads. Back to our 1000000 threads, in order to run these threads simultaneously in
+      most efficient way, we must use blocks.</p>
+    <p>- Why need blocks? it is all about parallelism. If Nvidia designed 1 block N threads instead M blocks N threads,
     </p>
-    <p>2. `threadIdx` is programming representation for threads in CUDA, <a
-        href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/#thread-hierarchy">https://docs.nvidia.com/cuda/cuda-c-programming-guide/#thread-hierarchy</a>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+      <rect x="10" y="10" width="380" height="380" fill="#f0f0f0" stroke="#000000" stroke-width="2" />
+      <rect x="410" y="10" width="380" height="380" fill="#f0f0f0" stroke="#000000" stroke-width="2" />
+
+      <!-- Single Block -->
+      <rect x="20" y="20" width="360" height="360" fill="#a0c8e0" stroke="#000000" stroke-width="2" />
+      <text x="200" y="200" text-anchor="middle" font-size="24" font-weight="bold">Single Block</text>
+      <text x="200" y="230" text-anchor="middle" font-size="18">1024 Threads</text>
+
+      <!-- Multiple Blocks -->
+      <rect x="420" y="20" width="175" height="175" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <rect x="605" y="20" width="175" height="175" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <rect x="420" y="205" width="175" height="175" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <rect x="605" y="205" width="175" height="175" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <text x="600" y="200" text-anchor="middle" font-size="24" font-weight="bold">Multiple Blocks</text>
+      <text x="600" y="230" text-anchor="middle" font-size="18">4 x 256 Threads</text>
+
+      <!-- Labels -->
+      <text x="200" y="395" text-anchor="middle" font-size="16">GPU</text>
+      <text x="600" y="395" text-anchor="middle" font-size="16">GPU</text>
+    </svg>
+    <p style="font-size: 5px;">Generated by Claude Sonnet 3.5</p>
+    <p>-- In Nvidia, there is a term called `Streaming Multiprocessors (SM)` to do parallel computation, physically is
+      the count of Multiprocessors, based on `DeviceQuery`, I got `(084) Multiprocessors`, 84 SMs can run in parallel.
     </p>
-    <p>3. `<<<>>>` is to invoke kernel operation, <a
-          href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#kernels">https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#kernels</a>
+    <p>-- If we use 1 block only, nothing can be split among SMs, SMs distributed like below,</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+      <rect x="10" y="10" width="780" height="380" fill="#f0f0f0" stroke="#000000" stroke-width="2" />
+
+      <!-- GPU -->
+      <text x="400" y="40" text-anchor="middle" font-size="24" font-weight="bold">GPU</text>
+
+      <!-- SMs -->
+      <rect x="30" y="60" width="220" height="300" fill="#a0c8e0" stroke="#000000" stroke-width="2" />
+      <text x="140" y="85" text-anchor="middle" font-size="18">SM 1</text>
+
+      <rect x="290" y="60" width="220" height="300" fill="#a0c8e0" stroke="#000000" stroke-width="2" />
+      <text x="400" y="85" text-anchor="middle" font-size="18">SM 2</text>
+
+      <rect x="550" y="60" width="220" height="300" fill="#a0c8e0" stroke="#000000" stroke-width="2" />
+      <text x="660" y="85" text-anchor="middle" font-size="18">SM 3</text>
+
+      <!-- Blocks -->
+      <rect x="40" y="100" width="90" height="70" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <text x="85" y="140" text-anchor="middle" font-size="14">Block 1</text>
+
+      <rect x="150" y="100" width="90" height="70" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <text x="195" y="140" text-anchor="middle" font-size="14">Block 2</text>
+
+      <rect x="40" y="190" width="90" height="70" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <text x="85" y="230" text-anchor="middle" font-size="14">Block 3</text>
+
+      <rect x="300" y="100" width="90" height="70" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <text x="345" y="140" text-anchor="middle" font-size="14">Block 4</text>
+
+      <rect x="410" y="100" width="90" height="70" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <text x="455" y="140" text-anchor="middle" font-size="14">Block 5</text>
+
+      <rect x="560" y="100" width="90" height="70" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <text x="605" y="140" text-anchor="middle" font-size="14">Block 6</text>
+
+      <rect x="670" y="100" width="90" height="70" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <text x="715" y="140" text-anchor="middle" font-size="14">Block 7</text>
+    </svg>
+    <p style="font-size: 5px;">Generated by Claude Sonnet 3.5</p>
+    <p>5. Physically limit 1024 threads for each block, if we initiated beyond the physically limit, like 1000000
+      threads, CUDA will not execute the kernel. You can use CUDA debugger,</p>
+    <pre>
+```bash
+nvcc -G -g -o test test.cu
+cuda-gdb test
+break VecAdd
+run
+```
+
+```text
+[New Thread 0x7fa4d4012000 (LWP 140199)]
+[New Thread 0x7fa4d2d02000 (LWP 140200)]
+[Detaching after fork from child process 140201]
+[New Thread 0x7fa4cbfff000 (LWP 140208)]
+[New Thread 0x7fa4cb7fe000 (LWP 140209)]
+warning: Cuda API error detected: cudaLaunchKernel returned (0x9)
+```</pre>
+    <p>So to fix this, use multiple blocks!</p>
+    <pre>
+#include <stdio.h>
+#include <cuda_runtime.h>
+
+// Kernel definition
+__global__ void VecAdd(float* A, float* B, float* C)
+{
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    C[i] = A[i] + B[i];
+}
+
+int main()
+{
+    int N = 10240;
+    size_t size = N * sizeof(float);
+
+    // h == host == cpu
+    float *h_a, *h_b, *h_c;
+    
+    // d == device == gpu
+    float *d_a, *d_b, *d_c;
+    
+    h_a = (float*)malloc(size);
+    h_b = (float*)malloc(size);
+    h_c = (float*)malloc(size);
+    
+    for (int i = 0; i < N; i++) {
+        h_a[i] = i;
+        h_b[i] = i * 2;
+    }
+    
+    cudaMalloc(&d_a, size);
+    cudaMalloc(&d_b, size);
+    cudaMalloc(&d_c, size);
+    
+    cudaMemcpy(d_a, h_a, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, h_b, size, cudaMemcpyHostToDevice);
+
+
+    // Kernel invocation with N threads
+    int threadsPerBlock = 1024;
+    int blocksPerGrid = (N + threadsPerBlock - 1) / threadsPerBlock;
+    VecAdd<<<blocksPerGrid, threadsPerBlock>>>(d_a, d_b, d_c);
+    cudaMemcpy(h_c, d_c, size, cudaMemcpyDeviceToHost);
+
+    for (int i = 0; i < N; i++) {
+
+        if (h_c[i] != h_a[i] + h_b[i]) {
+            printf("Error: %f + %f != %f\n", h_a[i], h_b[i], h_c[i]);
+            break;
+        }
+    }
+    
+    free(h_a); free(h_b); free(h_c);
+    cudaFree(d_a); cudaFree(d_b); cudaFree(d_c);
+    
+    return 0;
+}</pre>
+    <p>Save it as `test.cu`, and then you can continue to compile,</p>
+    <pre>
+```bash
+nvcc test-fix.cu -o test-fix
+./test-fix
+```</pre>
+    <p>If the values are not consistent, it will hit the `printf` and early break. How about the debugger?</p>
+    <pre>
+```bash
+nvcc -G -g -o test-fix test-fix.cu
+cuda-gdb test-fix
+break VecAdd
+run
+```
+
+```text
+[New Thread 0x7fd4e4efe000 (LWP 140517)]
+[New Thread 0x7fd4df4f5000 (LWP 140518)]
+[Detaching after fork from child process 140519]
+[New Thread 0x7fd4dccb2000 (LWP 140532)]
+[New Thread 0x7fd4d1fff000 (LWP 140533)]
+[Switching focus to CUDA kernel 0, grid 1, block (0,0,0), thread (0,0,0), device 0, sm 0, warp 0, lane 0]
+
+Thread 1 "test-fix" hit Breakpoint 1, VecAdd<<<(10,1,1),(1024,1,1)>>> (A=0x7fd4b3a00000, B=0x7fd4b3a0a000, C=0x7fd4b3a14000) at test-fix.cu:7
+7           int i = blockDim.x * blockIdx.x + threadIdx.x;
+```</pre>
+    <p>Safely executed, the kernel invocation must be `blocksPerGrid, threadsPerBlock`, where `blocksPerGrid =
+      1024` and `threadsPerBlock = (N + threadsPerBlock - 1) / threadsPerBlock` to make sure `N` partitioned nicely,
+      1000000 // 1024 = 978 blocks.
     </p>
-    <p>You read it you will understand, you will found out CUDA is hard but it will become easier but still hard.</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+      <rect x="10" y="10" width="780" height="380" fill="#f0f0f0" stroke="#000000" stroke-width="2" />
+
+      <!-- Abstract Multiple Blocks -->
+      <rect x="20" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <rect x="80" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <rect x="140" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <rect x="200" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <rect x="260" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <rect x="320" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <rect x="380" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <rect x="440" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <rect x="500" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+      <rect x="560" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+
+      <text x="400" y="200" text-anchor="middle" font-size="24" font-weight="bold">Multiple Blocks</text>
+      <text x="400" y="230" text-anchor="middle" font-size="18">978 x 1024 Threads</text>
+
+      <!-- Labels -->
+      <text x="400" y="395" text-anchor="middle" font-size="16">GPU</text>
+    </svg>
+    <p>I did not visualized all the blocks, but you got the gist, CUDA programming for simple vector add operation for
+      1D.</p>
+
+
     <p>---</p>
     <p>thats all, give some love to Aisyah Razak.</p>
   </div>
