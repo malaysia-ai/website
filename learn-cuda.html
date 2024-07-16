@@ -78,8 +78,8 @@ int main()
     <p>So, let's try to complete it,</p>
     <pre>
 ```cuda
-#include <stdio.h>
-#include <cuda_runtime.h>
+#include &lt;stdio.h&gt;
+#include &lt;cuda_runtime.h&gt;
 
 // Kernel definition
 __global__ void VecAdd(float* A, float* B, float* C)
@@ -285,8 +285,9 @@ warning: Cuda API error detected: cudaLaunchKernel returned (0x9)
 ```</pre>
     <p>So to fix this, use multiple blocks!</p>
     <pre>
-#include <stdio.h>
-#include <cuda_runtime.h>
+```cuda
+#include &lt;stdio.h&gt;
+#include &lt;cuda_runtime.h&gt;
 
 // Kernel definition
 __global__ void VecAdd(float* A, float* B, float* C)
@@ -326,7 +327,7 @@ int main()
     // Kernel invocation with N threads
     int threadsPerBlock = 1024;
     int blocksPerGrid = (N + threadsPerBlock - 1) / threadsPerBlock;
-    VecAdd<<<blocksPerGrid, threadsPerBlock>>>(d_a, d_b, d_c);
+    VecAdd&lt;&lt;&lt;blocksPerGrid, threadsPerBlock&gt;&gt;&gt;(d_a, d_b, d_c);
     cudaMemcpy(h_c, d_c, size, cudaMemcpyDeviceToHost);
 
     for (int i = 0; i < N; i++) {
@@ -341,7 +342,8 @@ int main()
     cudaFree(d_a); cudaFree(d_b); cudaFree(d_c);
     
     return 0;
-}</pre>
+}
+```</pre>
     <p>Save it as `test-fix.cu`, and then you can continue to compile,</p>
     <pre>
 ```bash
@@ -368,11 +370,11 @@ run
 Thread 1 "test-fix" hit Breakpoint 1, VecAdd<<<(10,1,1),(1024,1,1)>>> (A=0x7fd4b3a00000, B=0x7fd4b3a0a000, C=0x7fd4b3a14000) at test-fix.cu:7
 7           int i = blockDim.x * blockIdx.x + threadIdx.x;
 ```</pre>
-    <p>Safely executed, the kernel invocation must be `VecAdd<<< blocksPerGrid, threadsPerBlock>>>`, where
-        `blocksPerGrid
-        =
-        1024` and `threadsPerBlock = (N + threadsPerBlock - 1) / threadsPerBlock` to make sure `N` partitioned nicely,
-        1000000 // 1024 = 978 blocks.
+    <p>Safely executed, the kernel invocation must be `VecAdd&lt;&lt;&lt;blocksPerGrid, threadsPerBlock>>>`, where
+      `blocksPerGrid
+      =
+      1024` and `threadsPerBlock = (N + threadsPerBlock - 1) / threadsPerBlock` to make sure `N` partitioned nicely,
+      1000000 // 1024 = 978 blocks.
     </p>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
       <rect x="10" y="10" width="780" height="380" fill="#f0f0f0" stroke="#000000" stroke-width="2" />
