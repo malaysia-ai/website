@@ -345,7 +345,7 @@ int main()
     
     return 0;
 }</pre>
-    <p>Save it as `test.cu`, and then you can continue to compile,</p>
+    <p>Save it as `test-fix.cu`, and then you can continue to compile,</p>
     <pre>
 ```bash
 nvcc test-fix.cu -o test-fix
@@ -371,9 +371,9 @@ run
 Thread 1 "test-fix" hit Breakpoint 1, VecAdd<<<(10,1,1),(1024,1,1)>>> (A=0x7fd4b3a00000, B=0x7fd4b3a0a000, C=0x7fd4b3a14000) at test-fix.cu:7
 7           int i = blockDim.x * blockIdx.x + threadIdx.x;
 ```</pre>
-    <p>Safely executed, the kernel invocation must be `blocksPerGrid, threadsPerBlock`, where `blocksPerGrid =
-      1024` and `threadsPerBlock = (N + threadsPerBlock - 1) / threadsPerBlock` to make sure `N` partitioned nicely,
-      1000000 // 1024 = 978 blocks.
+    <p>Safely executed, the kernel invocation must be `<<< blocksPerGrid, threadsPerBlock>>>`, where `blocksPerGrid =
+        1024` and `threadsPerBlock = (N + threadsPerBlock - 1) / threadsPerBlock` to make sure `N` partitioned nicely,
+        1000000 // 1024 = 978 blocks.
     </p>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
       <rect x="10" y="10" width="780" height="380" fill="#f0f0f0" stroke="#000000" stroke-width="2" />
@@ -477,7 +477,7 @@ __global__ void VecAdd(float* A, float* B, float* C)
 110
 111
 ```</pre>
-    <p>`i` printed in the kernel is not in the order.</p>
+    <p>You can see that `i` printed in the kernel are not in the order.</p>
     <p>7. Actually you can use `VecAdd<<<1, N>>>(d_a, d_b, d_c)` 1 block as long N is less than physical thread size,
         which is if you follow `blockDim.x * blockIdx.x + threadIdx.x`, `blockDim.x * blockIdx.x` both are 0.</p>
     <p>8. If you understand `blockDim`, `blockIdx`, `threadIdx`, and pointers, you are good to go, CUDA already put a
