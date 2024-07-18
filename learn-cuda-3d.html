@@ -1,0 +1,348 @@
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- HTML Meta Tags -->
+  <title>Malaysia-AI blog learn CUDA 3D</title>
+  <meta name="description" content="Malaysia-AI blog learn CUDA 3D">
+
+  <!-- Facebook Meta Tags -->
+  <meta property="og:url" content="https://malaysia-ai.org/learn-cuda-2d">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Malaysia-AI blog learn CUDA 3D">
+  <meta property="og:description" content="Malaysia-AI blog learn CUDA 3D">
+  <meta property="og:image" content="https://malaysia-ai.org/learn-cuda-2d.png">
+
+  <!-- Twitter Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="twitter:domain" content="malaysia-ai.org">
+  <meta property="twitter:url" content="https://malaysia-ai.org/learn-cuda-2d">
+  <meta name="twitter:title" content="Malaysia-AI blog learn CUDA 3D">
+  <meta name="twitter:description" content="Malaysia-AI blog learn CUDA 3D">
+  <meta name="twitter:image" content="https://malaysia-ai.org/learn-cuda-2d.png">
+
+  <!-- Meta Tags Generated via https://www.opengraph.xyz -->
+
+  <style>
+    body {
+      line-height: 1.4;
+      font-size: 16px;
+      padding: 0 10px;
+      margin: 50px auto;
+      max-width: 1000px;
+    }
+
+    #maincontent {
+      max-width: 62em;
+      margin: 15 auto;
+    }
+
+    pre {
+      margin-top: 0px;
+      white-space: break-spaces;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="maincontent" style="margin-top: 70px">
+    <h2>learn CUDA 3D</h2>
+
+    <p>Previously <a href="https://malaysia-ai.org/learn-cuda-2d">https://malaysia-ai.org/learn-cuda-2d</a> that we know
+      CUDA threads and blocks support three dimensional space, (x, y, z), mentioned at <a
+        href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/#thread-hierarchy">https://docs.nvidia.com/cuda/cuda-c-programming-guide/#thread-hierarchy</a>
+    </p>
+
+    <p>Quick recap, in 2D, we do,</p>
+    <pre>
+```cuda
+// 16 * 16 = 256
+dim3 threadsPerBlock(16, 16);
+dim3 blocksPerGrid((columns + threadsPerBlock.x - 1) / threadsPerBlock.x, 
+                    (rows + threadsPerBlock.y - 1) / threadsPerBlock.y);
+VecAdd&lt;&lt;&lt;blocksPerGrid, threadsPerBlock&gt;&gt;&gt;
+```</pre>
+    <p>Which is view as,</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+      <!-- Grid -->
+      <g id="grid">
+        <rect x="50" y="50" width="700" height="400" fill="#f0f0f0" stroke="#000" stroke-width="2" />
+        <!-- Vertical lines -->
+        <line x1="250" y1="50" x2="250" y2="450" stroke="#888" stroke-width="1" stroke-dasharray="5,5" />
+        <line x1="450" y1="50" x2="450" y2="450" stroke="#888" stroke-width="1" stroke-dasharray="5,5" />
+        <line x1="650" y1="50" x2="650" y2="450" stroke="#888" stroke-width="1" stroke-dasharray="5,5" />
+        <!-- Horizontal lines -->
+        <line x1="50" y1="250" x2="750" y2="250" stroke="#888" stroke-width="1" stroke-dasharray="5,5" />
+      </g>
+
+      <!-- Blocks -->
+      <g id="blocks">
+        <rect x="60" y="60" width="180" height="180" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="260" y="60" width="180" height="180" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="460" y="60" width="180" height="180" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="60" y="260" width="180" height="180" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="260" y="260" width="180" height="180" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="460" y="260" width="180" height="180" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+      </g>
+
+      <!-- Threads -->
+      <g id="threads">
+        <circle cx="100" cy="100" r="10" fill="#ff9999" stroke="#cc0000" stroke-width="2" />
+        <circle cx="140" cy="100" r="10" fill="#ff9999" stroke="#cc0000" stroke-width="2" />
+        <circle cx="100" cy="140" r="10" fill="#ff9999" stroke="#cc0000" stroke-width="2" />
+        <circle cx="140" cy="140" r="10" fill="#ff9999" stroke="#cc0000" stroke-width="2" />
+
+        <circle cx="100" cy="300" r="10" fill="#ff9999" stroke="#cc0000" stroke-width="2" />
+        <circle cx="140" cy="300" r="10" fill="#ff9999" stroke="#cc0000" stroke-width="2" />
+        <circle cx="100" cy="340" r="10" fill="#ff9999" stroke="#cc0000" stroke-width="2" />
+        <circle cx="140" cy="340" r="10" fill="#ff9999" stroke="#cc0000" stroke-width="2" />
+      </g>
+
+      <!-- Labels -->
+      <g id="labels" font-family="Arial" font-size="16">
+        <text x="400" y="30" text-anchor="middle" font-weight="bold">2D Grid of Thread Blocks</text>
+        <text x="150" y="40" text-anchor="middle">Block (0,0)</text>
+        <text x="350" y="40" text-anchor="middle">Block (1,0)</text>
+        <text x="550" y="40" text-anchor="middle">Block (2,0)</text>
+        <text x="150" y="240" text-anchor="middle">Block (0,1)</text>
+        <text x="30" y="150" text-anchor="middle" transform="rotate(-90 30,150)">blockIdx.y</text>
+        <text x="400" y="480" text-anchor="middle">blockIdx.x</text>
+        <text x="90" y="90" text-anchor="middle" font-size="12">Thread (0,0)</text>
+        <text x="170" y="90" text-anchor="middle" font-size="12">Thread (1,0)</text>
+        <text x="90" y="150" text-anchor="middle" font-size="12">Thread (0,1)</text>
+        <text x="170" y="150" text-anchor="middle" font-size="12">Thread (1,1)</text>
+
+        <text x="90" y="290" text-anchor="middle" font-size="12">Thread (0,0)</text>
+        <text x="170" y="290" text-anchor="middle" font-size="12">Thread (1,0)</text>
+        <text x="90" y="350" text-anchor="middle" font-size="12">Thread (0,1)</text>
+        <text x="170" y="350" text-anchor="middle" font-size="12">Thread (1,1)</text>
+      </g>
+    </svg>
+    <p style="font-size: 10px;">Generated by Claude Sonnet 3.5 with minimal changes.</p>
+    <p>As stated, third dimension is always there, with size of 1, we can initiate it as `dim3 threadsPerBlock(8, 8,
+      8)`, 8 x 8 x 8 = 512 units but view as a cube.</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 500">
+      <!-- 3D Grid -->
+      <g id="grid">
+        <!-- Back face -->
+        <polygon points="100,100 400,100 400,400 100,400" fill="#f0f0f0" stroke="#000" stroke-width="2" />
+        <!-- Right face -->
+        <polygon points="400,100 475,175 475,475 400,400" fill="#e0e0e0" stroke="#000" stroke-width="2" />
+        <!-- Bottom face -->
+        <polygon points="100,400 400,400 475,475 175,475" fill="#d0d0d0" stroke="#000" stroke-width="2" />
+      </g>
+
+      <!-- 3D Blocks -->
+      <g id="blocks">
+        <!-- Back layer blocks -->
+        <rect x="120" y="120" width="80" height="80" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="220" y="120" width="80" height="80" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="120" y="220" width="80" height="80" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="220" y="220" width="80" height="80" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+
+      </g>
+
+      <!-- Threads (showing only in one block for clarity) -->
+      <g id="threads">
+        <circle cx="140" cy="140" r="5" fill="#ff9999" stroke="#cc0000" stroke-width="1" />
+        <circle cx="160" cy="140" r="5" fill="#ff9999" stroke="#cc0000" stroke-width="1" />
+        <circle cx="140" cy="160" r="5" fill="#ff9999" stroke="#cc0000" stroke-width="1" />
+        <circle cx="160" cy="160" r="5" fill="#ff9999" stroke="#cc0000" stroke-width="1" />
+      </g>
+
+      <!-- Labels and Annotations -->
+      <g id="labels" font-family="Arial" font-size="14">
+        <text x="400" y="50" text-anchor="middle" font-size="18" font-weight="bold">3D Grid of Thread Blocks</text>
+
+        <!-- Axis labels -->
+        <text x="200" y="420" text-anchor="middle">blockIdx.x</text>
+        <text x="80" y="250" text-anchor="middle" transform="rotate(-90 80,250)">blockIdx.y</text>
+        <text x="560" y="420" text-anchor="middle" transform="rotate(-45 470,570)">blockIdx.z</text>
+
+        <!-- Block coordinates -->
+        <text x="160" y="115" text-anchor="middle">(0,0,0)</text>
+        <text x="260" y="115" text-anchor="middle">(1,0,0)</text>
+        <text x="160" y="215" text-anchor="middle">(0,1,0)</text>
+      </g>
+    </svg>
+    <p style="font-size: 10px;">Generated by Claude Sonnet 3.5 with minimal changes.</p>
+    <p>- In order to know x coordinate, `blockIdx.x * blockDim.x + threadIdx.x`</p>
+    <p>- In order to know y coordinate, `blockIdx.y * blockDim.y + threadIdx.y`</p>
+    <p>- In order to know z coordinate, `blockIdx.z * blockDim.z + threadIdx.z`</p>
+    <p>Assumed we defined `rows = 100`, `columns = 100` and `z = 100`, so to convert from 3D coordinate to 1D, let say
+      (0, 0, 1), is not that straight forward. As we know, 3D is just
+      an array of 2D, a stack of 2D blocks on top of 2D blocks, so when we say (0, 0, 1), it is at (0, 0) coordinate at
+      second block of 2D.
+    <p>So because it is located at second block of 2D, 1 * size of rows * size of columns == 1 * 100 * 100 = 10000, plus
+      with
+      the coordinate of (0, 0), which is last time defined as row * columns + col == 0 * 100 + 0 == 0.</p>
+    <p>10000 + 0 = 10000, so the
+      coordinate in 1D space is 10000.</p>
+    <p>How about (11, 3, 4)? 4 * 100 * 100 + 11 * 100 + 3 = 41103.</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+      <!-- 3D Grid -->
+      <g id="grid">
+        <!-- Back face -->
+        <polygon points="100,100 400,100 400,400 100,400" fill="#f0f0f0" stroke="#000" stroke-width="2" />
+        <!-- Right face -->
+        <polygon points="400,100 550,250 550,550 400,400" fill="#e0e0e0" stroke="#000" stroke-width="2" />
+        <!-- Bottom face -->
+        <polygon points="100,400 400,400 550,550 250,550" fill="#d0d0d0" stroke="#000" stroke-width="2" />
+      </g>
+
+      <!-- 3D Blocks -->
+      <g id="blocks">
+        <!-- Back layer blocks -->
+        <rect x="120" y="120" width="80" height="80" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="220" y="120" width="80" height="80" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="120" y="220" width="80" height="80" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="220" y="220" width="80" height="80" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+
+        <!-- Middle layer blocks (partially visible) -->
+        <rect x="170" y="170" width="80" height="80" fill="#80bfff" stroke="#0066cc" stroke-width="2" opacity="0.7" />
+        <rect x="270" y="170" width="80" height="80" fill="#80bfff" stroke="#0066cc" stroke-width="2" opacity="0.7" />
+        <rect x="170" y="270" width="80" height="80" fill="#80bfff" stroke="#0066cc" stroke-width="2" opacity="0.7" />
+        <rect x="270" y="270" width="80" height="80" fill="#80bfff" stroke="#0066cc" stroke-width="2" opacity="0.7" />
+
+        <!-- Front layer blocks (edges only) -->
+        <rect x="220" y="220" width="80" height="80" fill="none" stroke="#0066cc" stroke-width="2"
+          stroke-dasharray="5,5" />
+        <rect x="320" y="220" width="80" height="80" fill="none" stroke="#0066cc" stroke-width="2"
+          stroke-dasharray="5,5" />
+        <rect x="220" y="320" width="80" height="80" fill="none" stroke="#0066cc" stroke-width="2"
+          stroke-dasharray="5,5" />
+        <rect x="320" y="320" width="80" height="80" fill="none" stroke="#0066cc" stroke-width="2"
+          stroke-dasharray="5,5" />
+      </g>
+
+      <!-- Threads (showing only in one block for clarity) -->
+      <g id="threads">
+        <circle cx="140" cy="140" r="5" fill="#ff9999" stroke="#cc0000" stroke-width="1" />
+        <circle cx="160" cy="140" r="5" fill="#ff9999" stroke="#cc0000" stroke-width="1" />
+        <circle cx="140" cy="160" r="5" fill="#ff9999" stroke="#cc0000" stroke-width="1" />
+        <circle cx="160" cy="160" r="5" fill="#ff9999" stroke="#cc0000" stroke-width="1" />
+      </g>
+
+      <!-- Labels and Annotations -->
+      <g id="labels" font-family="Arial" font-size="14">
+        <text x="400" y="50" text-anchor="middle" font-size="18" font-weight="bold">3D Grid of Thread Blocks</text>
+
+        <!-- Axis labels -->
+        <text x="200" y="420" text-anchor="middle">blockIdx.x</text>
+        <text x="80" y="250" text-anchor="middle" transform="rotate(-90 80,250)">blockIdx.y</text>
+        <text x="550" y="520" text-anchor="middle" transform="rotate(-45 470,570)">blockIdx.z</text>
+
+        <!-- Block coordinates -->
+        <text x="160" y="115" text-anchor="middle">(0,0,0)</text>
+        <text x="260" y="115" text-anchor="middle">(1,0,0)</text>
+        <text x="160" y="215" text-anchor="middle">(0,1,0)</text>
+        <text x="310" y="165" text-anchor="start">(1,0,1)</text>
+
+        <!-- Index calculation -->
+        <text x="500" y="320">3D to 1D index conversion:</text>
+        <text x="500" y="340">i is the current x-coordinate</text>
+        <text x="500" y="360">j is the current y-coordinate</text>
+        <text x="500" y="380">k is the current z-coordinate</text>
+        <text x="500" y="400">1d = k * rows * columns + j * columns + i</text>
+      </g>
+    </svg>
+    <p>Now let us code 3D vector add operation,</p>
+    <pre>
+```cuda
+#include &lt;stdio.h&gt;
+#include &lt;cuda_runtime.h&gt;
+
+// Kernel definition
+__global__ void VecAdd(int *a, int *b, int *c, int rows, int columns, int z) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
+
+  int idx = k * rows * columns + j * columns + i;
+  c[idx] = a[idx] + b[idx];
+  
+}
+
+int main()
+{
+    int rows = 100;
+    int columns = 100;
+    int z = 100;
+    size_t size = rows * columns * z * sizeof(int);
+    
+    int *h_a, *h_b, *h_c;
+    
+    int *d_a, *d_b, *d_c;
+    
+    h_a = (int*)malloc(size);
+    h_b = (int*)malloc(size);
+    h_c = (int*)malloc(size);
+    
+    for (int i = 0; i < rows * columns * z; i++) {
+        h_a[i] = i;
+        h_b[i] = i * 2;
+    }
+    
+    cudaMalloc(&d_a, size);
+    cudaMalloc(&d_b, size);
+    cudaMalloc(&d_c, size);
+    
+    cudaMemcpy(d_a, h_a, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, h_b, size, cudaMemcpyHostToDevice);
+
+    // 8 * 8 * 8 = 512
+    dim3 threadsPerBlock(8, 8, 8);
+    dim3 numBlocks((columns + threadsPerBlock.x - 1) / threadsPerBlock.x, 
+                   (rows + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                   (z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+    VecAdd&lt;&lt;&lt;numBlocks, threadsPerBlock>>>(d_a, d_b, d_c, rows, columns, z);
+
+    cudaMemcpy(h_c, d_c, size, cudaMemcpyDeviceToHost);
+
+    for (int i = 0; i < rows * columns; i++) {
+        if (h_c[i] != h_a[i] + h_b[i]) {
+            printf("Error: %d + %d != %d\n", h_a[i], h_b[i], h_c[i]);
+            break;
+        }
+    }
+    
+    free(h_a); free(h_b); free(h_c);
+    cudaFree(d_a); cudaFree(d_b); cudaFree(d_c);
+}
+```</pre>
+    <p>Save the complete code above above (the long one) as `test.cu`, and then you can continue to compile,</p>
+    <pre>
+```bash
+nvcc test.cu -o test
+./test
+```</pre>
+    <p>Let us try to use debugger,</p>
+    <pre>
+```bash
+nvcc -G -g -o test test.cu
+cuda-gdb test
+break VecAdd
+run
+```
+
+```text
+Using host libthread_db library "/usr/lib/x86_64-linux-gnu/libthread_db.so.1".
+[New Thread 0x7f2b0d8d1000 (LWP 700605)]
+[New Thread 0x7f2b07fff000 (LWP 700606)]
+[Detaching after fork from child process 700607]
+[New Thread 0x7f2b057bc000 (LWP 700614)]
+[New Thread 0x7f2b04fbb000 (LWP 700615)]
+[Switching focus to CUDA kernel 0, grid 1, block (0,0,0), thread (0,0,0), device 0, sm 0, warp 0, lane 0]
+
+Thread 1 "test" hit Breakpoint 1, VecAdd<<<(13,13,13),(8,8,8)>>> (a=0x7f2adba00000, b=0x7f2adea00000, c=0x7f2adee00000, rows=100, columns=100, z=100) at test.cu:6
+6         int i = blockIdx.x * blockDim.x + threadIdx.x;
+```</pre>
+    <p>No issue.</p>
+    <p>---</p>
+    <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
+  </div>
+</body>
+
+</html>
