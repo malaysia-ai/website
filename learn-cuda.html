@@ -482,7 +482,8 @@ __global__ void VecAdd(float* A, float* B, float* C)
 ```</pre>
     <p>You can see that `i` printed in the kernel are not in the order.</p>
     <p>7. Actually you can use `VecAdd<<<1, N>>>(d_a, d_b, d_c)` 1 block as long N is less than physical thread size,
-        which is if you follow `blockDim.x * blockIdx.x + threadIdx.x`, `blockDim.x * blockIdx.x` both are 0.</p>
+        which is if you follow `blockDim.x * blockIdx.x + threadIdx.x`, `blockDim.x * blockIdx.x` is 0 because
+        `blockIdx.x` is 0.</p>
     <p>8. If you understand `blockDim`, `blockIdx`, `threadIdx`, and pointers, you are good to go, CUDA already put a
       lot of abstractions for us to write CUDA programming.</p>
     <p>---</p>
