@@ -1,0 +1,161 @@
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- HTML Meta Tags -->
+  <title>Malaysia-AI blog learn CUDA N Dimensional</title>
+  <meta name="description" content="Malaysia-AI blog learn CUDA N Dimensional">
+
+  <!-- Facebook Meta Tags -->
+  <meta property="og:url" content="https://malaysia-ai.org/learn-cuda-nd">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Malaysia-AI blog learn CUDA N Dimensional">
+  <meta property="og:description" content="Malaysia-AI blog learn CUDA N Dimensional">
+  <meta property="og:image" content="https://malaysia-ai.org/learn-cuda-nd.png">
+
+  <!-- Twitter Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="twitter:domain" content="malaysia-ai.org">
+  <meta property="twitter:url" content="https://malaysia-ai.org/learn-cuda-nd">
+  <meta name="twitter:title" content="Malaysia-AI blog learn CUDA N Dimensional">
+  <meta name="twitter:description" content="Malaysia-AI blog learn CUDA N Dimensional">
+  <meta name="twitter:image" content="https://malaysia-ai.org/learn-cuda-nd.png">
+
+  <!-- Meta Tags Generated via https://www.opengraph.xyz -->
+
+  <style>
+    body {
+      line-height: 1.4;
+      font-size: 16px;
+      padding: 0 10px;
+      margin: 50px auto;
+      max-width: 1000px;
+    }
+
+    #maincontent {
+      max-width: 62em;
+      margin: 15 auto;
+    }
+
+    pre {
+      margin-top: 0px;
+      white-space: break-spaces;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="maincontent" style="margin-top: 70px">
+    <h2>learn CUDA N Dimension</h2>
+    <p>As we know, CUDA threads and blocks support up to three dimensional space only (x, y, z), but a tensor can go up
+      to N dimensional space! For an example, Multi-head Attention is 4D, (batch size, head dimension, sequence length,
+      dimension), or batch of videos is 5D (batch size, length video, height, width, depth), So how?</p>
+
+    <p>Let us look at 3D with shape(10, 10, 10),</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 500">
+      <!-- 3D Grid -->
+      <g id="grid">
+        <!-- Back face -->
+        <polygon points="100,100 400,100 400,400 100,400" fill="#f0f0f0" stroke="#000" stroke-width="2" />
+        <!-- Right face -->
+        <polygon points="400,100 475,175 475,475 400,400" fill="#e0e0e0" stroke="#000" stroke-width="2" />
+        <!-- Bottom face -->
+        <polygon points="100,400 400,400 475,475 175,475" fill="#d0d0d0" stroke="#000" stroke-width="2" />
+      </g>
+
+      <!-- 3D Blocks -->
+      <g id="blocks">
+        <!-- Back layer blocks -->
+        <rect x="120" y="120" width="80" height="80" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="220" y="120" width="80" height="80" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="120" y="220" width="80" height="80" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="220" y="220" width="80" height="80" fill="#b3d9ff" stroke="#0066cc" stroke-width="2" />
+
+      </g>
+
+      <!-- Threads (showing only in one block for clarity) -->
+      <g id="threads">
+        <circle cx="140" cy="140" r="5" fill="#ff9999" stroke="#cc0000" stroke-width="1" />
+        <circle cx="160" cy="140" r="5" fill="#ff9999" stroke="#cc0000" stroke-width="1" />
+        <circle cx="140" cy="160" r="5" fill="#ff9999" stroke="#cc0000" stroke-width="1" />
+        <circle cx="160" cy="160" r="5" fill="#ff9999" stroke="#cc0000" stroke-width="1" />
+      </g>
+
+      <!-- Labels and Annotations -->
+      <g id="labels" font-family="Arial" font-size="14">
+        <text x="400" y="50" text-anchor="middle" font-size="18" font-weight="bold">3D with shape(10, 10, 10)</text>
+
+        <!-- Axis labels -->
+        <text x="200" y="420" text-anchor="middle">blockIdx.x, 10</text>
+        <text x="80" y="250" text-anchor="middle" transform="rotate(-90 80,250)">blockIdx.y, 10</text>
+        <text x="560" y="420" text-anchor="middle" transform="rotate(-45 470,570)">blockIdx.z, 10</text>
+
+        <!-- Block coordinates -->
+        <text x="160" y="115" text-anchor="middle">(0,0,0)</text>
+        <text x="260" y="115" text-anchor="middle">(1,0,0)</text>
+        <text x="160" y="215" text-anchor="middle">(0,1,0)</text>
+      </g>
+    </svg>
+    <p>Actually you can reshape to become 2D by combining second and third dimensions to become (10, 100), yeah you can
+      say, of course second dimension is 100 because 10 x 10 is equal to 100, straight forward, but how about
+      geometrically? The intuitive of reshaping.</p>
+    <p>- We know that 3D got 1000 elements, 10 x 10 x 10.</p>
+    <p>- We know that 2D got 1000 elements, 10 x 100.</p>
+    <p>- To reshape 3D to become 2D, we basically take slices of 2D and put at the right side of 10 x 10, to
+      become
+      a rectangle.</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 150">
+      <!-- 3D cube -->
+      <g transform="translate(50,50) scale(0.8)">
+        <path d="M0,0 L60,0 L60,60 L0,60 Z" fill="none" stroke="black" />
+        <path d="M0,0 L20,-20 L80,-20 L60,0 Z" fill="none" stroke="black" />
+        <path d="M60,60 L80,40 L80,-20 L60,0 Z" fill="none" stroke="black" />
+        <text x="30" y="35" font-size="12" text-anchor="middle">10x10x10</text>
+
+        <!-- Correct slicing -->
+        <path d="M20,-20 L80,-20 L80,40 L20,40 Z" fill="rgba(255,0,0,0.2)" stroke="red" />
+        <path d="M16,-16 L76,-16 L76,44 L16,44 Z" fill="rgba(0,255,0,0.2)" stroke="green" />
+        <path d="M12,-12 L72,-12 L72,48 L12,48 Z" fill="rgba(0,0,255,0.2)" stroke="blue" />
+        <text x="50" y="-25" font-size="10">Back</text>
+        <text x="-10" y="75" font-size="10">Front</text>
+      </g>
+
+      <!-- Arrow -->
+      <path d="M130,80 L230,80" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+      <text x="200" y="70" font-size="12" text-anchor="middle">Reshape</text>
+
+      <!-- 2D rectangle -->
+      <rect x="270" y="65" width="300" height="30" fill="none" stroke="black" />
+      <text x="420" y="60" font-size="12" text-anchor="middle">10x100 2D Array</text>
+
+      <!-- Slices in 2D array -->
+      <rect x="540" y="65" width="30" height="30" fill="rgba(255,0,0,0.2)" stroke="red" />
+      <rect x="510" y="65" width="30" height="30" fill="rgba(0,255,0,0.2)" stroke="green" />
+      <rect x="480" y="65" width="30" height="30" fill="rgba(0,0,255,0.2)" stroke="blue" />
+      <rect x="270" y="65" width="210" height="30" fill="rgba(200,200,200,0.2)" stroke="gray" />
+
+      <!-- Arrowhead definition -->
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" />
+        </marker>
+      </defs>
+    </svg>
+    <p>Now you see the column is wider, become 100.</p>
+    <p>Because we combined from third dimension into second dimension, the slicing happened on third dimension, because
+      as we know, 3D is just an array of 2D, if we slice at first dimension, it is an array of height x depth, if we
+      slice at second dimension, it is an array of width x depth, and we slice at third dimension, it is an array of
+      height x width.</p>
+    <p>Same goes if you want to reshape 4D to become 3D, you are slicing cubes at 4th dimension and put at 3rd to become
+      a cuboid.</p>
+
+
+    </p>
+    <p>---</p>
+    <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
+  </div>
+</body>
+
+</html>
