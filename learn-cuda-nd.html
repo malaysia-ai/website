@@ -148,10 +148,105 @@
       as we know, 3D is just an array of 2D, if we slice at first dimension, it is an array of height x depth, if we
       slice at second dimension, it is an array of width x depth, and we slice at third dimension, it is an array of
       height x width.</p>
-    <p>Same goes if you want to reshape 4D to become 3D, you are slicing cubes at 4th dimension and put at 3rd to become
-      a cuboid.</p>
+    <p>Same goes if you want to reshape 4D to become 3D, you are slicing cubes at 4th dimension and put at 3rd dimension
+      to become
+      longer cuboid.</p>
+    <p>Same goes if you want to reshape 5D to become 3D, you do slicing inside slicing!</p>
+    <p>To code 5D vector add operation, is simple, you just do `z = z1 * z2 * zn ...`, which `z1` is the third
+      dimension, `z2` is fourth dimension, `zn` is 3 + n dimension.</p>
+    <pre>
+```cuda
+#include &lt;stdio.h&gt;
+#include &lt;cuda_runtime.h&gt;
 
+// Kernel definition
+__global__ void VecAdd(int *a, int *b, int *c, int rows, int columns, int z) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
 
+  int idx = k * rows * columns + j * columns + i;
+  c[idx] = a[idx] + b[idx];
+  
+}
+
+int main()
+{
+    int rows = 100;
+    int columns = 100;
+    int z1 = 2;
+    int z2 = 4;
+    int z3 = 5;
+    int z = z1 * z2 * z3;
+    size_t size = rows * columns * z * sizeof(int);
+    
+    int *h_a, *h_b, *h_c;
+    
+    int *d_a, *d_b, *d_c;
+    
+    h_a = (int*)malloc(size);
+    h_b = (int*)malloc(size);
+    h_c = (int*)malloc(size);
+    
+    for (int i = 0; i < rows * columns * z; i++) {
+        h_a[i] = i;
+        h_b[i] = i * 2;
+    }
+    
+    cudaMalloc(&d_a, size);
+    cudaMalloc(&d_b, size);
+    cudaMalloc(&d_c, size);
+    
+    cudaMemcpy(d_a, h_a, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, h_b, size, cudaMemcpyHostToDevice);
+
+    // 8 * 8 * 8 = 512
+    dim3 threadsPerBlock(8, 8, 8);
+    dim3 numBlocks((columns + threadsPerBlock.x - 1) / threadsPerBlock.x, 
+                   (rows + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                   (z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+    VecAdd&lt;&lt;&lt;numBlocks, threadsPerBlock>>>(d_a, d_b, d_c, rows, columns, z);
+
+    cudaMemcpy(h_c, d_c, size, cudaMemcpyDeviceToHost);
+
+    for (int i = 0; i < rows * columns; i++) {
+        if (h_c[i] != h_a[i] + h_b[i]) {
+            printf("Error: %d + %d != %d\n", h_a[i], h_b[i], h_c[i]);
+            break;
+        }
+    }
+    
+    free(h_a); free(h_b); free(h_c);
+    cudaFree(d_a); cudaFree(d_b); cudaFree(d_c);
+}
+```</pre>
+    <p>Save the complete code above above (the long one) as `test.cu`, and then you can continue to compile,</p>
+    <pre>
+```bash
+nvcc test.cu -o test
+./test
+```</pre>
+    <p>Let us try to use debugger,</p>
+    <pre>
+```bash
+nvcc -G -g -o test test.cu
+cuda-gdb test
+break VecAdd
+run
+```
+
+```text
+[New Thread 0x7ffbe6b9f000 (LWP 1306063)]
+[New Thread 0x7ffbe588f000 (LWP 1306064)]
+[Detaching after fork from child process 1306065]
+[New Thread 0x7ffbe4d73000 (LWP 1306078)]
+[New Thread 0x7ffbddfbd000 (LWP 1306079)]
+[Switching focus to CUDA kernel 0, grid 1, block (0,0,0), thread (0,0,0), device 0, sm 0, warp 0, lane 0]
+
+Thread 1 "test" hit Breakpoint 1, VecAdd<<<(13,13,5),(8,8,8)>>> (a=0x7ffbb5a00000, b=0x7ffbb5c00000, c=0x7ffbb5e00000, rows=100, columns=100, z=40) at test.cu:6
+6         int i = blockIdx.x * blockDim.x + threadIdx.x;
+```</pre>
+    <p>No issue.</p>
     </p>
     <p>---</p>
     <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
