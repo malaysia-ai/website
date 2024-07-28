@@ -1,0 +1,76 @@
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- HTML Meta Tags -->
+  <title>Malaysia-AI blog Tensor Parallelism Pytorch</title>
+  <meta name="description" content="Malaysia-AI blog Tensor Parallelism Pytorch">
+
+  <!-- Facebook Meta Tags -->
+  <meta property="og:url" content="https://malaysia-ai.org/tp-pytorch">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Malaysia-AI blog Tensor Parallelism Pytorch">
+  <meta property="og:description" content="Malaysia-AI blog Tensor Parallelism Pytorch">
+  <meta property="og:image" content="https://malaysia-ai.org/tp-pytorch.png">
+
+  <!-- Twitter Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="twitter:domain" content="malaysia-ai.org">
+  <meta property="twitter:url" content="https://malaysia-ai.org/tp-pytorch">
+  <meta name="twitter:title" content="Malaysia-AI blog Tensor Parallelism Pytorch">
+  <meta name="twitter:description" content="Malaysia-AI blog Tensor Parallelism Pytorch">
+  <meta name="twitter:image" content="https://malaysia-ai.org/tp-pytorch.png">
+
+  <!-- Meta Tags Generated via https://www.opengraph.xyz -->
+
+  <style>
+    body {
+      line-height: 1.4;
+      font-size: 16px;
+      padding: 0 10px;
+      margin: 50px auto;
+      max-width: 1000px;
+    }
+
+    #maincontent {
+      max-width: 62em;
+      margin: 15 auto;
+    }
+
+    pre {
+      margin-top: 0px;
+      white-space: break-spaces;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="maincontent" style="margin-top: 70px">
+    <h2>Tensor Parallelism Pytorch</h2>
+    <p>Deep learning is getting bigger especially for Language Model, and the relationship between performance vs size
+      already explained in <a href="https://arxiv.org/abs/2001.08361">kaplan2020scalinglawsneurallanguage</a>,</p>
+    <img src="/kaplan2020scalinglawsneurallanguage-fig1.png" width="80%">
+    <p>The more compute, more data, more parameters you have, the better the performance in term of perplexity.</p>
+    <p>And when GPT-3 released, which is 175B parameters, it changed the world. From the paper <a
+        href="https://arxiv.org/abs/2005.14165">brown2020languagemodelsfewshotlearners</a>, basically if you scaled
+      large enough the parameters with the appropriate amount of dataset, the pretrained language model able to do any
+      NLP task as long you give few examples or the technical term is few-shots learner, without need to go training
+      session (training session in 2024 got multiple stages such as pretraining, continue pretraining, pre-finetuning,
+      mid-finetuning, post-finetuning).</p>
+    <p>Now 175B is huge, the paper released at 2020, and 175B is insane even nowadays is still considered insanely
+      large. GPT-3 trained on V100, mentioned in the paper section 2.3,</p>
+    <img src="/kaplan2020scalinglawsneurallanguage-2.3.png" width="80%">
+    <p>V100 is best for single-precision, which is 32 bit, assumed if the model saved in float32, 4 bytes, 175B * 4
+      bytes ~= 652 GB!</p>
+    <p>For V100, the biggest GPU memory is 32GB, 652GB / 32 = 21 GPUs! So you need at least 21 units of V100 32GB VRAM!
+      to do feed-forward.</p>
+
+
+    <p>---</p>
+    <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
+  </div>
+</body>
+
+</html>
