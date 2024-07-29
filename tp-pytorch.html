@@ -4,22 +4,22 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- HTML Meta Tags -->
-  <title>Malaysia-AI blog Tensor Parallelism Pytorch</title>
-  <meta name="description" content="Malaysia-AI blog Tensor Parallelism Pytorch">
+  <title>Malaysia-AI blog Tensor Parallelism PyTorch</title>
+  <meta name="description" content="Malaysia-AI blog Tensor Parallelism PyTorch">
 
   <!-- Facebook Meta Tags -->
   <meta property="og:url" content="https://malaysia-ai.org/tp-pytorch">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Malaysia-AI blog Tensor Parallelism Pytorch">
-  <meta property="og:description" content="Malaysia-AI blog Tensor Parallelism Pytorch">
+  <meta property="og:title" content="Malaysia-AI blog Tensor Parallelism PyTorch">
+  <meta property="og:description" content="Malaysia-AI blog Tensor Parallelism PyTorch">
   <meta property="og:image" content="https://malaysia-ai.org/tp-pytorch.png">
 
   <!-- Twitter Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
   <meta property="twitter:domain" content="malaysia-ai.org">
   <meta property="twitter:url" content="https://malaysia-ai.org/tp-pytorch">
-  <meta name="twitter:title" content="Malaysia-AI blog Tensor Parallelism Pytorch">
-  <meta name="twitter:description" content="Malaysia-AI blog Tensor Parallelism Pytorch">
+  <meta name="twitter:title" content="Malaysia-AI blog Tensor Parallelism PyTorch">
+  <meta name="twitter:description" content="Malaysia-AI blog Tensor Parallelism PyTorch">
   <meta name="twitter:image" content="https://malaysia-ai.org/tp-pytorch.png">
 
   <!-- Meta Tags Generated via https://www.opengraph.xyz -->
@@ -48,7 +48,7 @@
 <body>
 
   <div id="maincontent" style="margin-top: 70px">
-    <h2>Tensor Parallelism Pytorch</h2>
+    <h2>Tensor Parallelism PyTorch</h2>
     <p>Deep learning is getting bigger especially for Language Model, and the relationship between performance vs size
       already explained in <a href="https://arxiv.org/abs/2001.08361">kaplan2020scalinglawsneurallanguage</a>,</p>
     <img src="/kaplan2020scalinglawsneurallanguage-fig1.png" width="80%">
@@ -66,7 +66,7 @@
       bytes ~= 652 GB!</p>
     <p>For V100, the biggest GPU memory is 32GB, 652GB / 32 = 21 GPUs! So you need at least 21 units of V100 32GB VRAM
       just to store the model in the memory, not yet feed-forward!</p>
-    <p>So how does OpenAI able to load the model into multiple-GPUs? <b>Tensor Parallelism!</b></p>
+    <p>So how does OpenAI able to load the model into multiple GPUs? <b>Tensor Parallelism!</b></p>
     <p>As you can see, the model is not fit in a single GPU, so we have to shard the model. There are 2 sharding method
       for deep learning, 1. Tensor Parallelism, 2. Pipeline Parallelism.</p>
     <p>Assumed I have a model with 2 hidden layers, 4x4 and 4x2, and 2 GPUs,</p>
@@ -97,7 +97,7 @@
         <!-- Output -->
         <rect x="470" y="50" width="60" height="40" fill="#FFD700" stroke="black" />
         <text x="500" y="75" font-size="12" text-anchor="middle">Output</text>
-        <text x="500" y="85" font-size="10" text-anchor="middle">4x1</text>
+        <text x="500" y="85" font-size="10" text-anchor="middle">1x2</text>
 
         <!-- Connections -->
         <line x1="110" y1="70" x2="150" y2="70" stroke="black" marker-end="url(#arrowhead)" />
@@ -133,7 +133,7 @@
         <!-- Output -->
         <rect x="490" y="80" width="60" height="40" fill="#FFD700" stroke="black" />
         <text x="520" y="105" font-size="12" text-anchor="middle">Output</text>
-        <text x="520" y="115" font-size="10" text-anchor="middle">4x1</text>
+        <text x="520" y="115" font-size="10" text-anchor="middle">1x2</text>
 
         <!-- Connections -->
         <line x1="130" y1="100" x2="160" y2="100" stroke="black" marker-end="url(#arrowhead)" />
@@ -148,18 +148,26 @@
         </marker>
       </defs>
     </svg>
-    <p>- Tensor Parallelism shard hidden layers into multiple-GPUs but all the GPUs got all the hidden layers.</p>
-    <p>-- i. For the first hidden layer, we will split 4x4 into two row-wise and each GPUs store the weights, 2x4
-      GPU0
+    <p>Tensor Parallelism shard hidden layers into multiple GPUs but all the GPUs got all the hidden layers. While
+      Pipeline Parallelism split the hidden layers into multiple GPUs. Each method got their own pros and cons, but
+      this blog we will look into Tensor Parallelism using PyTorch. And Tensor Parallelism itself got 2 different
+      methods, 1. Row-Wise Parallel, 2. Column-Wise Parallel.</p>
+    <p>Row-Wise Parallel we shard the hidden layer in the row manner while Column-Wise we shard the hidden layer in the
+      column manner.</p>
+    <h3>Row-Wise Parallel</h3>
+    <p>By using the same hidden layers size above,</p>
+    <p>- i. For the first hidden layer, we will split 4x4 into two row-wise and each GPUs store the weights, 2x4
+      GPU 0
       and
-      2x4 GPU1.</p>
-    <p>-- ii. For the second hidden layer, we will split 4x2 into two row-wise and each GPUs store the weights, 2x2
-      GPU0
+      2x4 GPU 1.</p>
+    <p>- ii. For the second hidden layer, we will split 4x2 into two row-wise and each GPUs store the weights, 2x2
+      GPU 0
       and
-      2x2 GPU1.</p>
-    <p>-- iii. Input is 1x4 -> split into two column-wise and scatter to GPUs, 1x2 to GPU0 and 1x2 to GPU1, and each
+      2x2 GPU 1.</p>
+    <p>- iii. Input is 1x4 -> split into two column-wise and scatter to GPUs, 1x2 to GPU 0 and 1x2 to GPU 1, and each
       GPUs
-      will do matmul, GPU0 1x2 matmul 2x4 = 1x4, GPU01 1x2 matmul 2x4 = 1x4, after that aggregation. In term of matmul
+      will do matmul, GPU 0 1x2 matmul 2x4 = 1x4, GPU 1 1x2 matmul 2x4 = 1x4, after that aggregate sum. In term of
+      matmul
       coordinate,</p>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 650">
       <!-- Input Matrix -->
@@ -219,7 +227,7 @@
 
       <!-- Aggregation -->
       <g transform="translate(50, 550)">
-        <text x="0" y="-10" font-size="14" font-weight="bold">Aggregation</text>
+        <text x="0" y="-10" font-size="14" font-weight="bold">Aggregation Sum, usually happened at GPU 0 or CPU</text>
         <rect x="0" y="0" width="250" height="50" fill="#FFD700" stroke="black" />
         <text x="125" y="30" text-anchor="middle" font-size="12">[aw11+bw21, aw12+bw22, aw13+bw23, aw14+bw24]</text>
         <text x="265" y="30" text-anchor="middle" font-size="14">+</text>
@@ -230,13 +238,398 @@
         <text x="650" y="30" text-anchor="middle" font-size="12">[o1, o2, o3, o4]</text>
         <text x="650" y="70" text-anchor="middle" font-size="12">Final Result</text>
       </g>
+    </svg>
+    <p>- iv. Output from the first hidden layer now become the input, 1x4 -> split into two column-wise and scatter to
+      GPUs, 1x2 to GPU 0 and 1x2 to GPU 1, and each
+      GPUs
+      will do matmul, GPU 0 1x2 matmul 2x2 = 1x2, GPU 1 1x2 matmul 2x2 = 1x2, after that aggregate sum. In term of
+      matmul
+      coordinate,</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 650">
+      <!-- Input Matrix -->
+      <g transform="translate(50, 50)">
+        <text x="0" y="-10" font-size="14" font-weight="bold">Input Matrix (1x4)</text>
+        <rect x="0" y="0" width="200" height="50" fill="#ADD8E6" stroke="black" />
+        <line x1="100" y1="0" x2="100" y2="50" stroke="black" stroke-dasharray="5,5" />
+        <text x="50" y="30" text-anchor="middle" font-size="12">[a, b]</text>
+        <text x="150" y="30" text-anchor="middle" font-size="12">[c, d]</text>
+        <text x="-10" y="25" text-anchor="end" font-size="12">GPU 0</text>
+        <text x="210" y="25" text-anchor="start" font-size="12">GPU 1</text>
+      </g>
 
+      <!-- Hidden Layer Matrix -->
+      <g transform="translate(400, 50)">
+        <text x="0" y="-10" font-size="14" font-weight="bold">Hidden Layer (4x2)</text>
+        <rect x="0" y="0" width="100" height="200" fill="#90EE90" stroke="black" />
+        <line x1="0" y1="100" x2="100" y2="100" stroke="black" stroke-dasharray="5,5" />
+        <text x="50" y="40" text-anchor="middle" font-size="12">[w11, w12]</text>
+        <text x="50" y="80" text-anchor="middle" font-size="12">[w21, w22]</text>
+        <text x="50" y="140" text-anchor="middle" font-size="12">[w31, w32]</text>
+        <text x="50" y="180" text-anchor="middle" font-size="12">[w41, w42]</text>
+        <text x="-10" y="50" text-anchor="end" font-size="12">GPU 0</text>
+        <text x="-10" y="150" text-anchor="end" font-size="12">GPU 1</text>
+      </g>
+
+      <!-- Matrix Multiplication -->
+      <g transform="translate(50, 300)">
+        <text x="0" y="-30" font-size="14" font-weight="bold">Matrix Multiplication</text>
+
+        <!-- GPU 0 -->
+        <rect x="0" y="0" width="100" height="50" fill="#ADD8E6" stroke="black" opacity="0.7" />
+        <text x="50" y="30" text-anchor="middle" font-size="12">[a, b]</text>
+        <rect x="120" y="0" width="100" height="100" fill="#90EE90" stroke="black" opacity="0.7" />
+        <text x="170" y="30" text-anchor="middle" font-size="12">[w11, w12]</text>
+        <text x="170" y="70" text-anchor="middle" font-size="12">[w21, w22]</text>
+        <text x="110" y="55" text-anchor="end" font-size="12">×</text>
+        <path d="M 220,50 L 240,50 L 250,60 L 260,50 L 280,50" fill="none" stroke="black" />
+        <rect x="280" y="25" width="120" height="50" fill="#FFD700" stroke="black" />
+        <text x="340" y="55" text-anchor="middle" font-size="12">[aw11+bw21, aw12+bw22]</text>
+        <text x="0" y="-10" font-size="12" font-weight="bold">GPU 0</text>
+
+        <!-- GPU 1 -->
+        <g transform="translate(0, 120)">
+          <rect x="0" y="0" width="100" height="50" fill="#ADD8E6" stroke="black" opacity="0.7" />
+          <text x="50" y="30" text-anchor="middle" font-size="12">[c, d]</text>
+          <rect x="120" y="0" width="100" height="100" fill="#90EE90" stroke="black" opacity="0.7" />
+          <text x="170" y="30" text-anchor="middle" font-size="12">[w31, w32]</text>
+          <text x="170" y="70" text-anchor="middle" font-size="12">[w41, w42]</text>
+          <text x="110" y="55" text-anchor="end" font-size="12">×</text>
+          <path d="M 220,50 L 240,50 L 250,60 L 260,50 L 280,50" fill="none" stroke="black" />
+          <rect x="280" y="25" width="120" height="50" fill="#FFD700" stroke="black" />
+          <text x="340" y="55" text-anchor="middle" font-size="12">[cw31+dw41, cw32+dw42]</text>
+          <text x="0" y="-10" font-size="12" font-weight="bold">GPU 1</text>
+        </g>
+      </g>
+
+      <!-- Aggregation -->
+      <g transform="translate(50, 550)">
+        <text x="0" y="-10" font-size="14" font-weight="bold">Aggregation sum, usually happened at GPU 0 or CPU</text>
+        <rect x="0" y="0" width="150" height="50" fill="#FFD700" stroke="black" />
+        <text x="75" y="30" text-anchor="middle" font-size="12">[aw11+bw21, aw12+bw22]</text>
+        <text x="165" y="30" text-anchor="middle" font-size="14">+</text>
+        <rect x="180" y="0" width="150" height="50" fill="#FFD700" stroke="black" />
+        <text x="255" y="30" text-anchor="middle" font-size="12">[cw31+dw41, cw32+dw42]</text>
+        <path d="M 340,25 L 360,25 L 370,35 L 380,25 L 400,25" fill="none" stroke="black" />
+        <rect x="400" y="0" width="100" height="50" fill="#FFA07A" stroke="black" />
+        <text x="450" y="30" text-anchor="middle" font-size="12">[o1, o2]</text>
+        <text x="450" y="70" text-anchor="middle" font-size="12">Final Result</text>
+      </g>
 
     </svg>
-    <p>- While Pipeline Parallelism split the hidden layers into multiple-GPUs.</p>
-    <p>Each technique got their own pros and cons, but this blog we will look into Tensor Parallelism using PyTorch.</p>
+    <h3>Column-Wise Parallel</h3>
+    <p>By using the same hidden layers size as Row-Wise Parallel,</p>
+    <p>- i. For the first hidden layer, we will split 4x4 into two column-wise and each GPUs store the weights, 4x2
+      GPU 0
+      and
+      4x2 GPU 1.</p>
+    <p>- ii. For the second hidden layer, we will split 4x2 into two column-wise and each GPUs store the weights, 4x1
+      GPU 0
+      and
+      4x1 GPU 1.</p>
+    <p>- iii. Input is 1x4 -> replicated into the same as number of GPUs and scatter to GPUs, 1x4 to GPU 0 and 1x4 to
+      GPU 1, and each
+      GPUs
+      will do matmul, GPU 0 1x4 matmul 4x2 = 1x2, GPU 1 1x4 matmul 4x2 = 1x2, after that aggregate concatenation. In
+      term of matmul
+      coordinate,</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 850">
+      <!-- Input Matrix -->
+      <g transform="translate(50, 50)">
+        <text x="0" y="-10" font-size="14" font-weight="bold">Input Matrix (1x4) - Replicated</text>
+        <rect x="0" y="0" width="200" height="50" fill="#ADD8E6" stroke="black" />
+        <text x="100" y="30" text-anchor="middle" font-size="12">[a, b, c, d]</text>
+        <text x="-10" y="25" text-anchor="end" font-size="12">GPU 0</text>
+        <rect x="0" y="70" width="200" height="50" fill="#ADD8E6" stroke="black" />
+        <text x="100" y="100" text-anchor="middle" font-size="12">[a, b, c, d]</text>
+        <text x="-10" y="95" text-anchor="end" font-size="12">GPU 1</text>
+      </g>
 
+      <!-- Hidden Layer Matrix -->
+      <g transform="translate(400, 50)">
+        <text x="0" y="-10" font-size="14" font-weight="bold">Hidden Layer (4x4) - Column-wise Sharded</text>
+        <rect x="0" y="0" width="100" height="200" fill="#90EE90" stroke="black" />
+        <text x="50" y="40" text-anchor="middle" font-size="12">[w11, w12]</text>
+        <text x="50" y="80" text-anchor="middle" font-size="12">[w21, w22]</text>
+        <text x="50" y="120" text-anchor="middle" font-size="12">[w31, w32]</text>
+        <text x="50" y="160" text-anchor="middle" font-size="12">[w41, w42]</text>
+        <text x="-10" y="100" text-anchor="end" font-size="12">GPU 0</text>
 
+        <rect x="120" y="0" width="100" height="200" fill="#90EE90" stroke="black" />
+        <text x="170" y="40" text-anchor="middle" font-size="12">[w13, w14]</text>
+        <text x="170" y="80" text-anchor="middle" font-size="12">[w23, w24]</text>
+        <text x="170" y="120" text-anchor="middle" font-size="12">[w33, w34]</text>
+        <text x="170" y="160" text-anchor="middle" font-size="12">[w43, w44]</text>
+        <text x="230" y="100" text-anchor="start" font-size="12">GPU 1</text>
+      </g>
+
+      <!-- Matrix Multiplication -->
+      <g transform="translate(50, 300)">
+        <text x="0" y="-30" font-size="14" font-weight="bold">Matrix Multiplication</text>
+
+        <!-- GPU 0 -->
+        <rect x="0" y="0" width="200" height="50" fill="#ADD8E6" stroke="black" opacity="0.7" />
+        <text x="100" y="30" text-anchor="middle" font-size="12">[a, b, c, d]</text>
+        <rect x="220" y="0" width="100" height="200" fill="#90EE90" stroke="black" opacity="0.7" />
+        <text x="270" y="40" text-anchor="middle" font-size="12">[w11, w12]</text>
+        <text x="270" y="80" text-anchor="middle" font-size="12">[w21, w22]</text>
+        <text x="270" y="120" text-anchor="middle" font-size="12">[w31, w32]</text>
+        <text x="270" y="160" text-anchor="middle" font-size="12">[w41, w42]</text>
+        <text x="210" y="100" text-anchor="end" font-size="12">×</text>
+        <path d="M 320,100 L 340,100 L 350,110 L 360,100 L 380,100" fill="none" stroke="black" />
+        <rect x="380" y="75" width="400" height="50" fill="#FFD700" stroke="black" />
+        <text x="580" y="105" text-anchor="middle" font-size="12">[aw11+bw21+cw31+dw41, aw12+bw22+cw32+dw42]</text>
+        <text x="580" y="140" text-anchor="middle" font-size="12">[o1, o2]</text>
+        <text x="0" y="-10" font-size="12" font-weight="bold">GPU 0</text>
+
+        <!-- GPU 1 -->
+        <g transform="translate(0, 220)">
+          <rect x="0" y="0" width="200" height="50" fill="#ADD8E6" stroke="black" opacity="0.7" />
+          <text x="100" y="30" text-anchor="middle" font-size="12">[a, b, c, d]</text>
+          <rect x="220" y="0" width="100" height="200" fill="#90EE90" stroke="black" opacity="0.7" />
+          <text x="270" y="40" text-anchor="middle" font-size="12">[w13, w14]</text>
+          <text x="270" y="80" text-anchor="middle" font-size="12">[w23, w24]</text>
+          <text x="270" y="120" text-anchor="middle" font-size="12">[w33, w34]</text>
+          <text x="270" y="160" text-anchor="middle" font-size="12">[w43, w44]</text>
+          <text x="210" y="100" text-anchor="end" font-size="12">×</text>
+          <path d="M 320,100 L 340,100 L 350,110 L 360,100 L 380,100" fill="none" stroke="black" />
+          <rect x="380" y="75" width="400" height="50" fill="#FFD700" stroke="black" />
+          <text x="580" y="105" text-anchor="middle" font-size="12">[aw13+bw23+cw33+dw43, aw14+bw24+cw34+dw44]</text>
+          <text x="580" y="140" text-anchor="middle" font-size="12">[o3, o4]</text>
+          <text x="0" y="-10" font-size="12" font-weight="bold">GPU 1</text>
+        </g>
+      </g>
+
+      <!-- Aggregation -->
+      <g transform="translate(50, 750)">
+        <text x="0" y="-10" font-size="14" font-weight="bold">Aggregation concatenation, usually happened at GPU 0 or
+          CPU</text>
+        <rect x="0" y="0" width="200" height="50" fill="#FFD700" stroke="black" />
+        <text x="100" y="30" text-anchor="middle" font-size="12">[o1, o2]</text>
+        <rect x="200" y="0" width="200" height="50" fill="#FFD700" stroke="black" />
+        <text x="300" y="30" text-anchor="middle" font-size="12">[o3, o4]</text>
+        <path d="M 410,25 L 430,25 L 440,35 L 450,25 L 470,25" fill="none" stroke="black" />
+        <rect x="470" y="0" width="300" height="50" fill="#FFA07A" stroke="black" />
+        <text x="620" y="30" text-anchor="middle" font-size="12">[o1, o2, o3, o4]</text>
+        <text x="620" y="70" text-anchor="middle" font-size="12">Final Result</text>
+      </g>
+
+    </svg>
+    <p>- iv. Output from the first hidden layer now become the input, 1x4 -> replicated into the same as number of GPUs
+      and scatter to GPUs, 1x4 to GPU 0 and 1x4 to GPU 1, and each GPUs will do matmul, GPU 0 1x4 matmul 4x1 = 1x2, GPU
+      1 1x4 matmul
+      4x1 = 1x1, after that aggregate concatenation. In term of matmul coordinate,</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 850">
+      <!-- Input Matrix -->
+      <g transform="translate(50, 50)">
+        <text x="0" y="-10" font-size="14" font-weight="bold">Input Matrix (1x4) - Replicated</text>
+        <rect x="0" y="0" width="200" height="50" fill="#ADD8E6" stroke="black" />
+        <text x="100" y="30" text-anchor="middle" font-size="12">[a, b, c, d]</text>
+        <text x="-10" y="25" text-anchor="end" font-size="12">GPU 0</text>
+        <rect x="0" y="70" width="200" height="50" fill="#ADD8E6" stroke="black" />
+        <text x="100" y="100" text-anchor="middle" font-size="12">[a, b, c, d]</text>
+        <text x="-10" y="95" text-anchor="end" font-size="12">GPU 1</text>
+      </g>
+
+      <!-- Hidden Layer Matrix -->
+      <g transform="translate(400, 50)">
+        <text x="0" y="-10" font-size="14" font-weight="bold">Hidden Layer (4x2) - Column-wise Sharded</text>
+        <rect x="0" y="0" width="80" height="200" fill="#90EE90" stroke="black" />
+        <text x="40" y="40" text-anchor="middle" font-size="12">[w11]</text>
+        <text x="40" y="80" text-anchor="middle" font-size="12">[w21]</text>
+        <text x="40" y="120" text-anchor="middle" font-size="12">[w31]</text>
+        <text x="40" y="160" text-anchor="middle" font-size="12">[w41]</text>
+        <text x="-10" y="100" text-anchor="end" font-size="12">GPU 0</text>
+
+        <rect x="100" y="0" width="80" height="200" fill="#90EE90" stroke="black" />
+        <text x="140" y="40" text-anchor="middle" font-size="12">[w12]</text>
+        <text x="140" y="80" text-anchor="middle" font-size="12">[w22]</text>
+        <text x="140" y="120" text-anchor="middle" font-size="12">[w32]</text>
+        <text x="140" y="160" text-anchor="middle" font-size="12">[w42]</text>
+        <text x="190" y="100" text-anchor="start" font-size="12">GPU 1</text>
+      </g>
+
+      <!-- Matrix Multiplication -->
+      <g transform="translate(50, 300)">
+        <text x="0" y="-30" font-size="14" font-weight="bold">Matrix Multiplication</text>
+
+        <!-- GPU 0 -->
+        <rect x="0" y="0" width="200" height="50" fill="#ADD8E6" stroke="black" opacity="0.7" />
+        <text x="100" y="30" text-anchor="middle" font-size="12">[a, b, c, d]</text>
+        <rect x="220" y="0" width="80" height="200" fill="#90EE90" stroke="black" opacity="0.7" />
+        <text x="260" y="40" text-anchor="middle" font-size="12">[w11]</text>
+        <text x="260" y="80" text-anchor="middle" font-size="12">[w21]</text>
+        <text x="260" y="120" text-anchor="middle" font-size="12">[w31]</text>
+        <text x="260" y="160" text-anchor="middle" font-size="12">[w41]</text>
+        <text x="210" y="100" text-anchor="end" font-size="12">×</text>
+        <path d="M 300,100 L 320,100 L 330,110 L 340,100 L 360,100" fill="none" stroke="black" />
+        <rect x="360" y="75" width="400" height="50" fill="#FFD700" stroke="black" />
+        <text x="560" y="105" text-anchor="middle" font-size="12">[aw11 + bw21 + cw31 + dw41]</text>
+        <text x="560" y="140" text-anchor="middle" font-size="12">[o1]</text>
+        <text x="0" y="-10" font-size="12" font-weight="bold">GPU 0</text>
+
+        <!-- GPU 1 -->
+        <g transform="translate(0, 220)">
+          <rect x="0" y="0" width="200" height="50" fill="#ADD8E6" stroke="black" opacity="0.7" />
+          <text x="100" y="30" text-anchor="middle" font-size="12">[a, b, c, d]</text>
+          <rect x="220" y="0" width="80" height="200" fill="#90EE90" stroke="black" opacity="0.7" />
+          <text x="260" y="40" text-anchor="middle" font-size="12">[w12]</text>
+          <text x="260" y="80" text-anchor="middle" font-size="12">[w22]</text>
+          <text x="260" y="120" text-anchor="middle" font-size="12">[w32]</text>
+          <text x="260" y="160" text-anchor="middle" font-size="12">[w42]</text>
+          <text x="210" y="100" text-anchor="end" font-size="12">×</text>
+          <path d="M 300,100 L 320,100 L 330,110 L 340,100 L 360,100" fill="none" stroke="black" />
+          <rect x="360" y="75" width="400" height="50" fill="#FFD700" stroke="black" />
+          <text x="560" y="105" text-anchor="middle" font-size="12">[aw12 + bw22 + cw32 + dw42]</text>
+          <text x="560" y="140" text-anchor="middle" font-size="12">[o2]</text>
+          <text x="0" y="-10" font-size="12" font-weight="bold">GPU 1</text>
+        </g>
+      </g>
+
+      <!-- Aggregation -->
+      <g transform="translate(50, 750)">
+        <text x="0" y="-10" font-size="14" font-weight="bold">Aggregation concatenation, usually happened at GPU 0 or
+          CPU</text>
+        <rect x="0" y="0" width="150" height="50" fill="#FFD700" stroke="black" />
+        <text x="75" y="30" text-anchor="middle" font-size="12">[o1]</text>
+        <rect x="150" y="0" width="150" height="50" fill="#FFD700" stroke="black" />
+        <text x="225" y="30" text-anchor="middle" font-size="12">[o2]</text>
+        <path d="M 310,25 L 330,25 L 340,35 L 350,25 L 370,25" fill="none" stroke="black" />
+        <rect x="370" y="0" width="200" height="50" fill="#FFA07A" stroke="black" />
+        <text x="470" y="30" text-anchor="middle" font-size="12">[o1, o2]</text>
+        <text x="470" y="70" text-anchor="middle" font-size="12">Final Result</text>
+      </g>
+
+    </svg>
+    <p>Because you shard the weights into N devices, you save the memory for each devices by N size also! The more
+      devices you have, the bigger model you can fit into.</p>
+    <h3>So now, let us code Tensor Parallelism Row-Wise using PyTorch!</h3>
+    <p>Why Row-Wise? because it looks harder, harder is good.</p>
+    <p>As we mentioned above, to do Tensor Parallelism, you must use multi-GPUs, and multi-GPUs required specific
+      distributed communication, lucky in PyTorch, there are native interface to communicate in distributed manner,
+      called <a href="https://pytorch.org/docs/stable/distributed.elastic.html">Torch Distributed Elastic</a>.</p>
+    <p>So what Torch Distributed Elastic do, each GPUs got it's own process,</p>
+    <p>- Let say I got 2 GPUs, Torch Distributed Elastic will spawn 2 processes, PID 0 for GPU 0, PID 1 for GPU 1.</p>
+    <p>- How does those processes communicated each other? Inter-process communication through open port. But for data
+      transfer for deep learning model, if you are using Nvidia, by default it will use <a
+        href="https://developer.nvidia.com/nccl">NCCL (pronounced as nickel)</a> for
+      gradients and weights synchronization.</p>
+    <p>- There are 3 important terms when talking about distributed system in Deep Learning framework or PyTorch,
+      `RANK`,
+      `WORLD_SIZE` and `LOCAL_WORD_SIZE`, `RANK` is the GPU rank, `WORLD_SIZE` is the total GPUs that you initialized
+      and `LOCAL_WORLD_SIZE` is the total GPUs for each nodes if you are using multi-nodes. But if you are using a
+      single node, `WORLD_SIZE` and `LOCAL_WORLD_SIZE` is same.</p>
+    <p>- GPU 0 is `RANK` 0 and GPU 1 is `RANK` 1, and `WORLD_SIZE` is 2. Both `RANK` and `WORLD_SIZE` able to fetch
+      using
+      OS environment variables which is automatically set by Torch Distributed Elastic.</p>
+    <p>- Assumed `RANK` 0 open port 29950 and `RANK` 1 open port 29951,</p>
+    <p style="width: 70%">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450">
+        <rect x="10" y="10" width="580" height="430" fill="#f0f0f0" stroke="#000" stroke-width="2" />
+        <text x="20" y="30" font-family="Arial" font-size="16">Host Machine</text>
+
+        <!-- GPU 0 -->
+        <rect x="50" y="50" width="200" height="100" fill="#ffd700" stroke="#000" stroke-width="2" />
+        <text x="70" y="100" font-family="Arial" font-size="14">GPU 0 (Rank 0)</text>
+
+        <!-- GPU 1 -->
+        <rect x="350" y="50" width="200" height="100" fill="#ffd700" stroke="#000" stroke-width="2" />
+        <text x="370" y="100" font-family="Arial" font-size="14">GPU 1 (Rank 1)</text>
+
+        <!-- /dev/shm -->
+        <rect x="200" y="200" width="200" height="50" fill="#b3e6ff" stroke="#000" stroke-width="2" />
+        <text x="260" y="230" font-family="Arial" font-size="14">/dev/shm</text>
+
+        <!-- Socket -->
+        <rect x="200" y="280" width="200" height="50" fill="#ffa07a" stroke="#000" stroke-width="2" />
+        <text x="270" y="310" font-family="Arial" font-size="14">CUDA IPC</text>
+
+        <!-- Port 29950 -->
+        <circle cx="150" cy="400" r="30" fill="#d3d3d3" stroke="#000" stroke-width="2" />
+        <text x="120" y="405" font-family="Arial" font-size="12">Port 29950</text>
+
+        <!-- Port 29951 -->
+        <circle cx="450" cy="400" r="30" fill="#d3d3d3" stroke="#000" stroke-width="2" />
+        <text x="420" y="405" font-family="Arial" font-size="12">Port 29951</text>
+
+        <!-- NCCL Connections to /dev/shm -->
+        <line x1="150" y1="150" x2="250" y2="200" stroke="#ff0000" stroke-width="2" />
+        <line x1="450" y1="150" x2="350" y2="200" stroke="#ff0000" stroke-width="2" />
+        <text x="180" y="180" font-family="Arial" font-size="12" fill="#ff0000">NCCL</text>
+        <text x="380" y="180" font-family="Arial" font-size="12" fill="#ff0000">NCCL</text>
+
+        <!-- NCCL Connections to Socket -->
+        <line x1="150" y1="150" x2="250" y2="280" stroke="#ff0000" stroke-width="2" />
+        <line x1="450" y1="150" x2="350" y2="280" stroke="#ff0000" stroke-width="2" />
+
+        <!-- Port Connections -->
+        <line x1="150" y1="370" x2="150" y2="150" stroke="#0000ff" stroke-width="2" />
+        <line x1="450" y1="370" x2="450" y2="150" stroke="#0000ff" stroke-width="2" />
+
+        <!-- Inter-port Connection -->
+        <line x1="180" y1="400" x2="420" y2="400" stroke="#0000ff" stroke-width="2" stroke-dasharray="5,5" />
+      </svg>
+    <p>- NCCL is using their own communication called CUDA IPC, Inter-Process Communication, a peer-to-peer
+      communication from
+      devices to devices. Not all GPUs support P2P, so if not supported, NCCL will use an alternative such as shared
+      memory located at `/dev/shm`.</p>
+    <p>- Why need different communications for multi-processing aka Torch Distributed Elastic and GPUs aka NCCL? Sockets
+      or open ports use to check heartbeats and communicate simple strings among multi-processes while NCCL only
+      designed for
+      Nvidia Peer-to-Peer multi-GPUs communication.</p>
+    <p>Before we do Tensor Parallelism, let us try simple scatter and gather just to familiarize with PyTorch
+      Distributed Elastic,</p>
+    <pre>
+```python
+import torch
+import torch.nn as nn
+import torch.distributed as dist
+import os
+
+def main():
+    world_size = torch.cuda.device_count()
+    local_rank = int(os.environ["LOCAL_RANK"])
+    device = f'cuda:{local_rank}'
+    dist.init_process_group(backend='nccl')
+    
+    tensor_size = 2
+
+    output_tensor = torch.zeros(tensor_size, device=device)
+    
+    if dist.get_rank() == 0:
+        t_ones = torch.ones(tensor_size, device=device)
+        t_fives = torch.ones(tensor_size, device=device) * 5
+        
+        scatter_list = [t_ones, t_fives]
+    else:
+        scatter_list = None
+
+    dist.scatter(output_tensor, scatter_list, src=0)
+
+    print(f'local rank: {local_rank}', output_tensor)
+
+if __name__ == "__main__":
+    main()
+```</pre>
+    <p>Save it as `simple-scatter.py`, and this example originally from <a
+        href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.scatter">https://pytorch.org/docs/stable/distributed.html#torch.distributed.scatter</a>,
+      we just make it complete. This example required two GPUs, and to execute it,</p>
+    <pre>
+```bash
+torchrun \
+--nproc-per-node=2 \
+simple-scatter.py
+```</pre>
+    <p>Output,</p>
+    <pre>
+```text
+local rank: 0 tensor([1., 1.], device='cuda:0')
+local rank: 1 tensor([5., 5.], device='cuda:1')
+```</pre>
+    <p>- `dist.scatter` is to scatter a list of tensors into N GPUs, and the length of the list must be the same as N
+      GPUs.</p>
+    <p>- An output tensor must be initialized for each GPUs, `output_tensor = torch.zeros(tensor_size, device=device)`.
+      So this output tensor is a temporary tensor and it will be replace during `dist.scatter`.</p>
+    <p>As you can see, `if dist.get_rank() == 0:` if `RANK` is 0, we put as a list, else as None.</p>
     <p>---</p>
     <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
   </div>
