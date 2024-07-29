@@ -607,29 +607,47 @@ def main():
 
     print(f'local rank: {local_rank}', output_tensor)
 
+    output_tensor += 1
+
+    if dist.get_rank() == 0:
+        t_ones1 = torch.ones(tensor_size, device=device)
+        t_ones2 = torch.ones(tensor_size, device=device)
+        scatter_list = [t_ones1, t_ones2]
+    else:
+        scatter_list = None
+    
+    dist.gather(output_tensor, scatter_list, dst=0)
+    if dist.get_rank() == 0:
+        print(scatter_list)
+
 if __name__ == "__main__":
     main()
 ```</pre>
-    <p>Save it as `simple-scatter.py`, and this example originally from <a
+    <p>Save it as `simple-scatter-gather.py`, and this example originally from <a
         href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.scatter">https://pytorch.org/docs/stable/distributed.html#torch.distributed.scatter</a>,
       we just make it complete. This example required two GPUs, and to execute it,</p>
     <pre>
 ```bash
 torchrun \
 --nproc-per-node=2 \
-simple-scatter.py
+simple-scatter-gather.py
 ```</pre>
     <p>Output,</p>
     <pre>
 ```text
 local rank: 0 tensor([1., 1.], device='cuda:0')
 local rank: 1 tensor([5., 5.], device='cuda:1')
+[tensor([2., 2.], device='cuda:0'), tensor([6., 6.], device='cuda:0')]
 ```</pre>
     <p>- `dist.scatter` is to scatter a list of tensors into N GPUs, and the length of the list must be the same as N
       GPUs.</p>
     <p>- An output tensor must be initialized for each GPUs, `output_tensor = torch.zeros(tensor_size, device=device)`.
       So this output tensor is a temporary tensor and it will be replace during `dist.scatter`.</p>
-    <p>As you can see, `if dist.get_rank() == 0:` if `RANK` is 0, we put as a list, else as None.</p>
+    <p>- `if dist.get_rank() == 0:` if `RANK` is 0, we put as a list, else as None.</p>
+    <p>- After that we plus by one for all GPUs and if the `RANK` is 0, we created 2 temporary tensors, for GPU 0 and
+      GPU 1.</p>
+    <p>- We gathered and print on `RANK` is 0. And as you can see, we got [2, 2] which is from GPU 0 and [6, 6] which is
+      from GPU 1.</p>
     <p>---</p>
     <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
   </div>
