@@ -639,15 +639,102 @@ local rank: 0 tensor([1., 1.], device='cuda:0')
 local rank: 1 tensor([5., 5.], device='cuda:1')
 [tensor([2., 2.], device='cuda:0'), tensor([6., 6.], device='cuda:0')]
 ```</pre>
-    <p>- `dist.scatter` is to scatter a list of tensors into N GPUs, and the length of the list must be the same as N
+    <p>1. `dist.scatter` is to scatter a list of tensors into N GPUs, and the length of the list must be the same as N
       GPUs.</p>
-    <p>- An output tensor must be initialized for each GPUs, `output_tensor = torch.zeros(tensor_size, device=device)`.
+    <p>2. An output tensor must be initialized for each GPUs, `output_tensor = torch.zeros(tensor_size, device=device)`.
       So this output tensor is a temporary tensor and it will be replace during `dist.scatter`.</p>
-    <p>- `if dist.get_rank() == 0:` if `RANK` is 0, we put as a list, else as None.</p>
-    <p>- After that we plus by one for all GPUs and if the `RANK` is 0, we created 2 temporary tensors, for GPU 0 and
+    <p>3. `if dist.get_rank() == 0:` if `RANK` is 0, we put as a list, else as None.</p>
+    <p>4. After that we plus by one for all GPUs and if the `RANK` is 0, we created 2 temporary tensors, for GPU 0 and
       GPU 1.</p>
-    <p>- We gathered and print on `RANK` is 0. And as you can see, we got [2, 2] which is from GPU 0 and [6, 6] which is
+    <p>5. We gathered and print on `RANK` is 0. And as you can see, we got [2, 2] which is from GPU 0 and [6, 6] which
+      is
       from GPU 1.</p>
+    <p>Now let us look into Tensor Parallelism Linear layer,</p>
+    <pre>
+```python
+import torch
+import torch.nn as nn
+import torch.distributed as dist
+import os
+
+class Linear(nn.Module):
+    def __init__(self, in_features, out_features):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+
+        self.rank = dist.get_rank()
+        self.world_size = dist.get_world_size()
+        self.device = f'cuda:{self.rank}'
+
+        self.local_in_features = in_features // self.world_size
+        self.local_out_features = out_features
+
+        self.linear = nn.Linear(self.local_in_features, self.local_out_features)
+    
+    def forward(self, x, batch_size):
+        
+        local_input = torch.zeros(batch_size, self.local_in_features, device=self.device)
+
+        dist.scatter(local_input, list(x.chunk(self.world_size, dim=1)) if self.rank == 0 else None, src=0)
+
+        local_output = self.linear(local_input)
+
+        dist.reduce(local_output, dst=0, op=dist.ReduceOp.SUM)
+
+        return local_output
+    
+def main():
+    world_size = torch.cuda.device_count()
+    local_rank = int(os.environ["LOCAL_RANK"])
+    device = f'cuda:{local_rank}'
+    dist.init_process_group(backend='nccl')
+
+    model = Linear(100, 50).to(device)
+    batch_size = 32
+
+    if dist.get_rank() == 0:
+        input_tensor = torch.randn(batch_size, 100, device=device)
+    else:
+        input_tensor = None
+
+    output = model(input_tensor, batch_size)
+    if dist.get_rank() == 0:
+        print(output, output.shape)
+
+if __name__ == "__main__":
+    main()
+```</pre>
+    <p>Save it as `tp-linear.py` and run it,</p>
+    <pre>
+```bash
+torchrun --nproc-per-node=2 tp-linear.py
+```</pre>
+    <p>Output,</p>
+    <pre>
+```
+tensor([[ 0.3327,  0.5701,  1.2123,  ..., -0.2698,  0.1395, -0.3736],
+        [ 1.8301,  0.1318,  0.1468,  ...,  2.5036, -1.4445, -0.4215],
+        [-0.2827,  1.5337,  0.7688,  ...,  1.8233, -1.2817,  0.7063],
+        ...,
+        [-1.0496,  0.3786, -0.7972,  ..., -0.1917, -1.0284,  0.4730],
+        [-0.1051,  0.6323,  0.3016,  ...,  1.1792,  0.7384, -0.1869],
+        [-1.3593, -0.8120,  0.9141,  ..., -0.4090,  0.5709, -0.5926]],
+       device='cuda:0', grad_fn=<AddmmBackward0>) torch.Size([32, 50])
+```</pre>
+    <p>The output size is 32x50, which is correct, 32x100 matmul 100x50 you got 32x50.</p>
+    <p>1. `local_in_features = in_features // self.world_size` we divide the size row with the world size, which is 2.
+    </p>
+    <p>2. After that we initialized linear layer `nn.Linear(self.local_in_features, self.local_out_features)`, each GPUs
+      will got 50x50 matrices.</p>
+    <p>3. As mentioned, An output tensor must be initialized for each GPUs, `local_input = torch.zeros(batch_size,
+      self.local_in_features, device=self.device)`.</p>
+    <p>4. If `RANK` is 0, shard the input and scatter to GPUs, `dist.scatter(local_input, list(x.chunk(self.world_size,
+      dim=1)) if self.rank == 0 else None, src=0)`.</p>
+    <p>5. Calculate matmul for each GPUs, `local_output = self.linear(local_input)`.</p>
+    <p>6. PyTorch natively got reduce function, `dist.reduce(local_output, dst=0, op=dist.ReduceOp.SUM)`, so we want
+      variable `local_output` across all GPUs to be reduce using sum operation and the final answer put at GPU 0.</p>
+    <p>7. Print!</p>
     <p>---</p>
     <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
   </div>
