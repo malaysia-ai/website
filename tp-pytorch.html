@@ -509,7 +509,7 @@
       called <a href="https://pytorch.org/docs/stable/distributed.elastic.html">Torch Distributed Elastic</a>.</p>
     <p>So what Torch Distributed Elastic do, each GPUs got it's own process,</p>
     <p>- Let say I got 2 GPUs, Torch Distributed Elastic will spawn 2 processes, PID 0 for GPU 0, PID 1 for GPU 1.</p>
-    <p>- How does those processes communicated each other? Inter-process communication through open port. But for data
+    <p>- How does these processes communicated each other? Inter-process communication through open port. But for data
       transfer for deep learning model, if you are using Nvidia, by default it will use <a
         href="https://developer.nvidia.com/nccl">NCCL (pronounced as nickel)</a> for
       gradients and weights synchronization.</p>
@@ -625,13 +625,26 @@ if __name__ == "__main__":
 ```</pre>
     <p>Save it as `simple-scatter-gather.py`, and this example originally from <a
         href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.scatter">https://pytorch.org/docs/stable/distributed.html#torch.distributed.scatter</a>,
-      we just make it complete. This example required two GPUs, and to execute it,</p>
+      we just make it complete. This example required two GPUs, and to execute it using `torchrun`,</p>
     <pre>
 ```bash
 torchrun \
 --nproc-per-node=2 \
 simple-scatter-gather.py
 ```</pre>
+    <p>And this CLI definition can read more at <a
+        href="https://pytorch.org/docs/stable/elastic/run.html#stacked-single-node-multi-worker">https://pytorch.org/docs/stable/elastic/run.html#stacked-single-node-multi-worker</a>
+    </p>
+    <pre>
+```bash
+torchrun \
+--nproc-per-node=$NUM_TRAINERS \
+YOUR_TRAINING_SCRIPT.py (--arg1 ... train script args...)
+```</pre>
+    <p>- `--nproc-per-node` is the size of GPUs you want to run, if set `--nproc-per-node=2` it will spawn 2 processes
+      and each process got their own GPU.</p>
+    <p>- `YOUR_TRAINING_SCRIPT.py (--arg1 ... train script args...)` is your Python script to run along with the
+      arguments.</p>
     <p>Output,</p>
     <pre>
 ```text
