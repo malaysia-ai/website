@@ -662,6 +662,46 @@ local rank: 1 tensor([5., 5.], device='cuda:1')
     <p>5. We gathered and print on `RANK` is 0. And as you can see, we got [2, 2] which is from GPU 0 and [6, 6] which
       is
       from GPU 1.</p>
+    <p>6. The data movement as below,</p>
+    <div style="width: 80%">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+        <!-- GPU 0 -->
+        <rect x="50" y="50" width="200" height="300" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
+        <text x="150" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="14">GPU 0</text>
+
+        <!-- GPU 1 -->
+        <rect x="350" y="50" width="200" height="300" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
+        <text x="450" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="14">GPU 1</text>
+
+        <!-- Step 1: Initial state -->
+        <text x="20" y="90" font-family="Arial, sans-serif" font-size="12">1.</text>
+        <text x="70" y="90" font-family="Arial, sans-serif" font-size="12">t_ones -> output_tensor</text>
+        <text x="70" y="110" font-family="Arial, sans-serif" font-size="12">t_fives -> GPU 1</text>
+        <text x="270" y="90" font-family="Arial, sans-serif" font-size="12">dist.scatter</text>
+        <text x="270" y="290" font-family="Arial, sans-serif" font-size="12">dist.gather</text>
+        <text x="370" y="110" font-family="Arial, sans-serif" font-size="12">output_tensor</text>
+        <path d="M 180 100 L 360 100" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+
+        <!-- Step 2: After scatter -->
+        <text x="20" y="190" font-family="Arial, sans-serif" font-size="12">2.</text>
+        <text x="70" y="190" font-family="Arial, sans-serif" font-size="12">output_tensor + 1</text>
+        <text x="370" y="190" font-family="Arial, sans-serif" font-size="12">output_tensor + 1</text>
+
+        <!-- Step 3: Gather -->
+        <text x="20" y="290" font-family="Arial, sans-serif" font-size="12">3.</text>
+        <path d="M 360 300 L 180 300" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="70" y="290" font-family="Arial, sans-serif" font-size="12">t_ones1 <- output_tensor</text>
+            <text x="70" y="310" font-family="Arial, sans-serif" font-size="12">t_ones2 <- GPU 1</text>
+                <text x="370" y="310" font-family="Arial, sans-serif" font-size="12">output_tensor</text>
+
+                <!-- Arrowhead marker -->
+                <defs>
+                  <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#000" />
+                  </marker>
+                </defs>
+      </svg>
+    </div>
     <p>Now let us look into Tensor Parallelism Linear layer,</p>
     <pre>
 ```python
@@ -747,7 +787,69 @@ tensor([[ 0.3327,  0.5701,  1.2123,  ..., -0.2698,  0.1395, -0.3736],
     <p>5. Calculate matmul for each GPUs, `local_output = self.linear(local_input)`.</p>
     <p>6. PyTorch natively got reduce function, `dist.reduce(local_output, dst=0, op=dist.ReduceOp.SUM)`, so we want
       variable `local_output` across all GPUs to be reduce using sum operation and the final answer put at GPU 0.</p>
-    <p>7. Print!</p>
+    <p>7. The data movement as below,</p>
+    <div style="width: 80%">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+        <!-- GPU 0 -->
+        <rect x="50" y="50" width="300" height="550" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
+        <text x="200" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold">GPU
+          0</text>
+
+        <!-- GPU 1 -->
+        <rect x="450" y="50" width="300" height="550" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
+        <text x="600" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold">GPU
+          1</text>
+
+        <!-- Step 1: Weight matrices -->
+        <text x="20" y="90" font-family="Arial, sans-serif" font-size="12" font-weight="bold">1. Weight Matrices</text>
+        <rect x="100" y="110" width="100" height="50" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
+        <text x="150" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">Weights (50x50)</text>
+        <rect x="500" y="110" width="100" height="50" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
+        <text x="550" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">Weights (50x50)</text>
+
+        <!-- Step 2: Input division -->
+        <text x="20" y="190" font-family="Arial, sans-serif" font-size="12" font-weight="bold">2. Input Division</text>
+        <rect x="100" y="210" width="200" height="50" fill="#ffcc99" stroke="#ff6600" stroke-width="2" />
+        <text x="200" y="240" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">Input Tensor
+          (32x100)</text>
+
+        <!-- Arrows with arrowheads and labels -->
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" />
+          </marker>
+        </defs>
+        <line x1="200" y1="260" x2="180" y2="320" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <line x1="200" y1="260" x2="530" y2="330" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="355" y="285" text-anchor="start" font-family="Arial, sans-serif" font-size="15">dist.scatter</text>
+
+        <!-- Step 3: Local input tensors -->
+        <text x="20" y="320" font-family="Arial, sans-serif" font-size="12" font-weight="bold">3. Local Input
+          Tensors</text>
+        <rect x="100" y="340" width="100" height="50" fill="#ffcc99" stroke="#ff6600" stroke-width="2" />
+        <text x="150" y="370" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">Input
+          (32x50)</text>
+        <rect x="500" y="340" width="100" height="50" fill="#ffcc99" stroke="#ff6600" stroke-width="2" />
+        <text x="550" y="370" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">Input
+          (32x50)</text>
+
+        <!-- Step 4: Local computation -->
+        <text x="20" y="420" font-family="Arial, sans-serif" font-size="12" font-weight="bold">4. Local
+          Computation</text>
+        <rect x="100" y="440" width="100" height="50" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="150" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">Output (32x50)</text>
+        <rect x="500" y="440" width="100" height="50" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="550" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">Output (32x50)</text>
+
+        <!-- Step 5: Reduction -->
+        <text x="20" y="520" font-family="Arial, sans-serif" font-size="12" font-weight="bold">5. Reduction (Sum)</text>
+        <line x1="550" y1="490" x2="220" y2="550" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="395" y="495" text-anchor="middle" font-family="Arial, sans-serif" font-size="15">dist.reduce</text>
+        <rect x="100" y="530" width="100" height="40" fill="#ffff99" stroke="#999900" stroke-width="2" />
+        <text x="150" y="555" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">Output
+          (32x50)</text>
+      </svg>
+    </div>
     <p>---</p>
     <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
   </div>
