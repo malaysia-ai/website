@@ -395,7 +395,7 @@
         <text x="275" y="490" text-anchor="middle" class="small">dist.all_gather TP Group [0, 1]</text>
         <rect x="75" y="520" width="400" height="40" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
         <text x="275" y="545" text-anchor="middle" class="label">Concatenated Output (32x50)</text>
-        <line x1="275" y1="560" x2="650" y2="610" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <line x1="275" y1="560" x2="640" y2="625" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
         <text x="500" y="580" text-anchor="middle" class="small">dist.broadcast PP Group [0, 2]</text>
       </g>
 
@@ -439,8 +439,10 @@
         <text x="775" y="1180" text-anchor="middle" class="small">Ready to pass back to CPU</text>
       </g>
     </svg>
-    <p>Cool is not it? Now let's go to the implementation. For distributed framework we decided to use <a
-        href="https://www.ray.io/">Ray</a> <b>(Please sponsor us something)</b> because we do
+    <p>Cool is not it? Now let's go to the implementation.</p>
+    <h3>PyTorch in Ray</h3>
+    <p>For distributed framework we decided to use <a href="https://www.ray.io/">Ray</a> <b>(Please sponsor us
+        something)</b> because we do
       not have a node with 4 GPUs, but we got 2 nodes with each 2 GPUs, so we connect those nodes using Ray inside
       Tailscale VPN.</p>
     <p>Why Ray? Ray is cool, nice UI, and the important parts are, <b>node auto discovery and automatic distributed
@@ -481,10 +483,166 @@ torchrun \
 --nnodes=2 --nproc_per_node=2 \
 --rdzv_id=1234 --rdzv_backend=c10d --rdzv_endpoint=100.93.25.29:29500 train.py
 ```</pre>
-    <p>Which is tedious, and each nodes must got the same script plus you must know the head of IP address! But in Ray,
-      you do not have to do this, you just run the script anywhere as long the script connected to the Ray head and Ray
-      will automatically distribute the script to another nodes.</p>
+    <p>Which is tedious, and each nodes must have the same script plus you must know the head of IP address! Or maybe
+      you saw someone run using Slurm before,
+    <pre>
+```bash
+nodes=( $( scontrol show hostnames $SLURM_JOB_NODELIST ) )
+nodes_array=($nodes)
+head_node=${nodes_array[0]}
+head_node_ip=$(srun --nodes=1 --ntasks=1 -w "$head_node" hostname --ip-address)
 
+srun torchrun \
+--nnodes 2 \
+--nproc_per_node 2 \
+--rdzv_id 1234 \
+--rdzv_backend c10d \
+--rdzv_endpoint $head_node_ip:29500 \
+train.py
+```</pre>
+    <p>Slurm also run the script for the entire nodes register in Slurm, but in other to build a Slurm cluster,</p>
+    <pre>
+```bash
+# /etc/slurm-llnl/slurm.conf
+ClusterName=my_cluster
+ControlMachine=100.93.25.29
+# extra configs
+
+NodeName=node1 NodeAddr=100.93.25.29 RealMemory=32000 Sockets=1 CoresPerSocket=4 ThreadsPerCore=2 Gres=gpu:2
+NodeName=node2 NodeAddr=100.92.17.27 RealMemory=32000 Sockets=1 CoresPerSocket=4 ThreadsPerCore=2 Gres=gpu:2
+PartitionName=debug Nodes=node1,node2 Default=YES MaxTime=INFINITE State=UP
+```</pre>
+    <p>You need to put the config for the all nodes available, and as you can see, you have to mention all the IP nodes!
+    </p>
+    <p>But in Ray,
+      you do not have to do all of that, you just run the script anywhere as long the script connected to the Ray head
+      and Ray
+      will automatically distribute the script to another nodes.</p>
+    <p>In head node 100.93.25.29, you have to run the Ray head mode,</p>
+    <pre>
+```bash
+ray start --head --port=6379 --dashboard-host=0.0.0.0
+```</pre>
+    <p>After that other nodes just connect using,</p>
+    <pre>
+```bash
+ray start --address=100.93.25.29:6379
+```</pre>
+    <p>Done! The cluster looks like below,</p>
+    <div style="width: 50%">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+        <!-- Background -->
+        <rect x="0" y="0" width="600" height="400" fill="#f0f0f0" />
+
+        <!-- Tailscale VPN -->
+        <ellipse cx="300" cy="200" rx="280" ry="180" fill="#e6f3ff" stroke="#2980b9" stroke-width="2" />
+        <text x="300" y="50" font-family="Arial, sans-serif" font-size="18" text-anchor="middle"
+          fill="#2980b9">Tailscale
+          VPN</text>
+
+        <!-- Node 1 -->
+        <rect x="100" y="100" width="180" height="200" rx="10" ry="10" fill="#ffffff" stroke="#3498db"
+          stroke-width="2" />
+        <text x="190" y="130" font-family="Arial, sans-serif" font-size="16" text-anchor="middle">Node 1</text>
+
+        <!-- GPUs in Node 1 -->
+        <rect x="120" y="160" width="60" height="40" rx="5" ry="5" fill="#f39c12" />
+        <rect x="200" y="160" width="60" height="40" rx="5" ry="5" fill="#f39c12" />
+        <text x="150" y="185" font-family="Arial, sans-serif" font-size="14" text-anchor="middle"
+          fill="#ffffff">GPU</text>
+        <text x="230" y="185" font-family="Arial, sans-serif" font-size="14" text-anchor="middle"
+          fill="#ffffff">GPU</text>
+
+        <!-- Node 2 -->
+        <rect x="320" y="100" width="180" height="200" rx="10" ry="10" fill="#ffffff" stroke="#3498db"
+          stroke-width="2" />
+        <text x="410" y="130" font-family="Arial, sans-serif" font-size="16" text-anchor="middle">Node 2</text>
+
+        <!-- GPUs in Node 2 -->
+        <rect x="340" y="160" width="60" height="40" rx="5" ry="5" fill="#f39c12" />
+        <rect x="420" y="160" width="60" height="40" rx="5" ry="5" fill="#f39c12" />
+        <text x="370" y="185" font-family="Arial, sans-serif" font-size="14" text-anchor="middle"
+          fill="#ffffff">GPU</text>
+        <text x="450" y="185" font-family="Arial, sans-serif" font-size="14" text-anchor="middle"
+          fill="#ffffff">GPU</text>
+
+        <!-- Ray connection -->
+        <line x1="280" y1="200" x2="320" y2="200" stroke="#27ae60" stroke-width="3" />
+        <text x="300" y="230" font-family="Arial, sans-serif" font-size="16" text-anchor="middle"
+          fill="#27ae60">Ray</text>
+
+        <!-- Ray logo (simplified) -->
+        <circle cx="300" cy="320" r="30" fill="#27ae60" />
+        <text x="300" y="328" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" fill="#ffffff"
+          font-weight="bold">Ray</text>
+      </svg>
+    </div>
+    <p>Even though to connect to the Ray must use the head node, but all the nodes in the Ray cluster able to
+      peer-to-peer communication without need to go the head node. And Ray comes with a nice dashboard!</p>
+    <img src="/ray-dashboard.png" width="50%">
+    <p>Also natively with Prometheus metrics (but we are not deployed it, too lazy), you can read more at <a
+        href="https://www.anyscale.com/blog/monitoring-and-debugging-ray-workloads-ray-metrics">https://www.anyscale.com/blog/monitoring-and-debugging-ray-workloads-ray-metrics</a>,
+      so when talk about Prometheus, you can setup real-time alerts to any channels that you want, for an example, GPU
+      temp reached >80c so you can send alert to Slack.
+    </p>
+    <img
+      src="https://images.ctfassets.net/xjan103pcp94/1rI8J9Bs7wEOLOCDGdYhmN/c19f8277a8918d6a2c6fa5248906175a/image9.png"
+      width="50%">
+    <p>Let us look into Ray,</p>
+    <pre>
+```python
+import torch
+import torch.nn as nn
+import torch.distributed as dist
+import os
+import ray
+from ray import train
+from ray.train import ScalingConfig
+from ray.train.torch import TorchTrainer
+
+def func():
+    print(os.environ)
+
+def main():
+    with RayConnection("ray://localhost:10001"):
+        scaling_config = ScalingConfig(
+            num_workers=4,
+            use_gpu=True,
+        )
+        ray_trainer = TorchTrainer(
+            func,
+            scaling_config=scaling_config,
+        )
+        ray_trainer.fit()
+
+if __name__ == "__main__":
+    main()
+```</pre>
+    <p>And save it as `test-ray.py`. In order to use PyTorch Distributed in Ray, you must use `TorchTrainer`. If you
+      look at the source code of
+      `TorchTrainer`, <a
+        href="https://github.com/ray-project/ray/blob/master/python/ray/train/torch/config.py#L153">https://github.com/ray-project/ray/blob/master/python/ray/train/torch/config.py#L153</a>,
+      behind the scene it still use native `torch.distributed.run` and properly setup the `MASTER_ADDR`, <a
+        href="https://github.com/ray-project/ray/blob/master/python/ray/train/torch/config.py#L169">https://github.com/ray-project/ray/blob/master/python/ray/train/torch/config.py#L169</a>
+    </p>
+    <pre>
+```python
+def set_env_vars(addr, port):
+    os.environ["MASTER_ADDR"] = addr
+    os.environ["MASTER_PORT"] = str(port)
+
+worker_group.execute(set_env_vars, addr=master_addr, port=master_port)
+```</pre>
+    <p>If you read the documentation at <a
+        href="https://pytorch.org/docs/stable/elastic/run.html#module-torch.distributed.run">https://pytorch.org/docs/stable/elastic/run.html#module-torch.distributed.run</a>
+      in the Note side, <b>torchrun is a python console script to the main module torch.distributed.run declared in the
+        entry_points configuration in setup.py. It is equivalent to invoking python -m torch.distributed.run.</b> So
+      basically `TorchTrainer` is also like `torchrun`, it just help you to set the arguments automatically.</p>
+    <p>Now let us run `test-ray.py`,</p>
+    <pre>
+```bash
+python3 test-ray.py
+```</pre>
     <p>---</p>
     <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
   </div>
