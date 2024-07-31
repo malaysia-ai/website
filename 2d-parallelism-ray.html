@@ -206,6 +206,10 @@
     <p>- The number of GPUs required is, M PP x N TP, if M = 2 and N = 2, we need 4 GPUs. 1 PP 2 TP means, all
       hidden
       layers inside the same GPU 0, but the weights sharded with GPU 1, so it required 2 GPUs.</p>
+    <p>- Because the hidden layers been splitted into M devices, and each weight been sharded by N, so GPU memory saved
+      by
+      M x N!</p>
+    <p>- This 2D Parallelism communication groups are like below,</p>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
       <defs>
         <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
@@ -284,7 +288,32 @@
     </svg>
     <p>- TP Group: [0, 1] is the TP communication group for GPU 0 and GPU 1, PP Group: [0, 2] is the PP communication
       group for GPU 0 and GPU 2, and TP Group: [2, 3] is the TP communication group for GPU 2 and GPU 3.</p>
-
+    <p>- Assumed I have 4 hidden layers, each hidden layer got a linear layer with size 50x50. Because each hidden
+      layer been TP, so GPU 0 50x25, GPU 1 50x25, GPU 2 50x25 and GPU 3 50x25.</p>
+    <p>-- 1. the input with size 32x50 will initialize at GPU 0, this will broadcast using `dist.broadcast` to GPU 1
+      using TP Group: [0, 1].</p>
+    <p>-- 2. On the first hidden layer, now GPU 0 input 32x50 matmul 50x25 = 32x25, GPU 1 input 32x50 matmul 50x25 =
+      32x25, and do `dist.all_gather`. So GPU 0 and GPU 1 will got the same list of matrices [32x25, 32x25], and GPU 0
+      and
+      GPU 1 will do concatenation on the last dimension, so it will become 32x50, ready to pass to second hidden layer.
+    </p>
+    <p>-- 3. On the second hidden layer, now GPU 0 input 32x50 matmul 50x25 = 32x25, GPU 1 input 32x50 matmul 50x25 =
+      32x25, and do `dist.all_gather`. So GPU 0 and GPU 1 will got the same list of matrices [32x25, 32x25], and GPU 0
+      and
+      GPU 1 will do concatenation on the last dimension, so it will become 32x50, ready to broadcast to GPU 2 using PP
+      Group: [0, 2].</p>
+    <p>-- 4. GPU 0 will broadcast using `dist.broadcast` to GPU 2 using PP Group: [0, 2], so GPU 2 input is 32x50.</p>
+    <p>-- 5. GPU 2 will broadcast using `dist.broadcast` to GPU 3 using TP Group: [2, 3], so GPU 3 input is 32x50.</p>
+    <p>-- 6. On the third hidden layer, now GPU 2 input 32x50 matmul 50x25 = 32x25, GPU 3 input 32x50 matmul 50x25 =
+      32x25, and do `dist.all_gather`. So GPU 2 and GPU 3 will got the same list of matrices [32x25, 32x25], and GPU 0
+      and
+      GPU 1 will do concatenation on the last dimension, so it will become 32x50, ready to pass to fourth hidden layer.
+    </p>
+    <p>-- 7. On the fourth hidden layer, now GPU 2 input 32x50 matmul 50x25 = 32x25, GPU 3 input 32x50 matmul 50x25 =
+      32x25, and do `dist.all_gather`. So GPU 2 and GPU 3 will got the same list of matrices [32x25, 32x25], and GPU 2
+      and
+      GPU 3 will do concatenation on the last dimension, so it will become 32x50, ready to pass back to CPU.</p>
+    <p>- The data movement as below,</p>
 
     <p>---</p>
     <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
