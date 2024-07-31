@@ -521,7 +521,7 @@ PartitionName=debug Nodes=node1,node2 Default=YES MaxTime=INFINITE State=UP
     <p>In head node 100.93.25.29, you have to run the Ray head mode,</p>
     <pre>
 ```bash
-ray start --head --port=6379 --dashboard-host=0.0.0.0
+ray start --head --node-ip-address=100.93.25.29 --port=6379 --dashboard-host=0.0.0.0
 ```</pre>
     <p>After that other nodes just connect using,</p>
     <pre>
@@ -601,19 +601,19 @@ from ray.train import ScalingConfig
 from ray.train.torch import TorchTrainer
 
 def func():
-    print(os.environ)
+    print(os.environ['LOCAL_RANK'], os.environ['RANK'], os.environ["WORLD_SIZE"], os.environ["NODE_RANK"])
 
 def main():
-    with RayConnection("ray://localhost:10001"):
-        scaling_config = ScalingConfig(
-            num_workers=4,
-            use_gpu=True,
-        )
-        ray_trainer = TorchTrainer(
-            func,
-            scaling_config=scaling_config,
-        )
-        ray_trainer.fit()
+    ray.init(address="ray://localhost:10001")
+    scaling_config = ScalingConfig(
+        num_workers=4,
+        use_gpu=True,
+    )
+    ray_trainer = TorchTrainer(
+        func,
+        scaling_config=scaling_config,
+    )
+    ray_trainer.fit()
 
 if __name__ == "__main__":
     main()
@@ -642,7 +642,35 @@ worker_group.execute(set_env_vars, addr=master_addr, port=master_port)
     <pre>
 ```bash
 python3 test-ray.py
+```
+
+```text
+(TunerInternal pid=14055) Training started without custom configuration.
+(RayTrainWorker pid=2180081, ip=100.92.17.27) Setting up process group for: env:// [rank=0, world_size=4]
+(RayTrainWorker pid=14207) [W Utils.hpp:133] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function getCvarInt)
+(RayTrainWorker pid=14206) [W Utils.hpp:133] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function getCvarInt)
+(TorchTrainer pid=2179995, ip=100.92.17.27) Started distributed worker processes: 
+(TorchTrainer pid=2179995, ip=100.92.17.27) - (ip=100.92.17.27, pid=2180081) world_rank=0, local_rank=0, node_rank=0
+(TorchTrainer pid=2179995, ip=100.92.17.27) - (ip=100.92.17.27, pid=2180082) world_rank=1, local_rank=1, node_rank=0
+(TorchTrainer pid=2179995, ip=100.92.17.27) - (ip=100.93.25.29, pid=14206) world_rank=2, local_rank=0, node_rank=1
+(TorchTrainer pid=2179995, ip=100.92.17.27) - (ip=100.93.25.29, pid=14207) world_rank=3, local_rank=1, node_rank=1
+(RayTrainWorker pid=2180081, ip=100.92.17.27) [W Utils.hpp:133] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function getCvarInt)
+(RayTrainWorker pid=2180082, ip=100.92.17.27) [W Utils.hpp:133] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function getCvarInt)
+(RayTrainWorker pid=14207) 1 3 4 1
+(RayTrainWorker pid=14206) 0 2 4 1
+(RayTrainWorker pid=2180081, ip=100.92.17.27) 0 0 4 0
+(RayTrainWorker pid=2180082, ip=100.92.17.27) 1 1 4 0
 ```</pre>
+    <p>The important logs,</p>
+    <pre>
+```text
+(TorchTrainer pid=2179995, ip=100.92.17.27) - (ip=100.92.17.27, pid=2180081) world_rank=0, local_rank=0, node_rank=0
+(TorchTrainer pid=2179995, ip=100.92.17.27) - (ip=100.92.17.27, pid=2180082) world_rank=1, local_rank=1, node_rank=0
+(TorchTrainer pid=2179995, ip=100.92.17.27) - (ip=100.93.25.29, pid=14206) world_rank=2, local_rank=0, node_rank=1
+(TorchTrainer pid=2179995, ip=100.92.17.27) - (ip=100.93.25.29, pid=14207) world_rank=3, local_rank=1, node_rank=1
+```</pre>
+    <p>Here you can clearly see local ranks, node ranks and world ranks.</p>
+
     <p>---</p>
     <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
   </div>
