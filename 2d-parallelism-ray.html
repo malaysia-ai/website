@@ -49,8 +49,9 @@
 
   <div id="maincontent" style="margin-top: 70px">
     <h2>2D Parallelism using Ray PyTorch</h2>
-    <p>Last time we already covered <a href="/tp-pytorch">Tensor Parallelism</a> and little bit of Pipeline Parallelism
-      using PyTorch Distributed Elastic, but did you know that you can combine Tensor Parallelism and Pipeline
+    <p>Last time we already covered <a href="/tp-pytorch">Tensor Parallelism</a>
+      using PyTorch Distributed Elastic and little bit of Pipeline Parallelism, but did you know that you can combine
+      Tensor Parallelism and Pipeline
       Parallelism in the same parallelism? Actually we got up to 4D! Tensor Parallelism + Pipeline Parallelism + Data
       Parallelism + Context Parallelism, TP + PP + DP + CP! But this blog we will only cover TP and PP.</p>
     <p>As we know, Tensor Parallelism split the weights either Row-Wise or Column-Wise to N GPUs and Pipeline
@@ -314,6 +315,175 @@
       and
       GPU 3 will do concatenation on the last dimension, so it will become 32x50, ready to pass back to CPU.</p>
     <p>- The data movement as below,</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1050 1250">
+      <!-- Styles -->
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#000" />
+        </marker>
+        <style type="text/css">
+          text {
+            font-family: Arial, sans-serif;
+          }
+
+          .title {
+            font-size: 16px;
+            font-weight: bold;
+          }
+
+          .subtitle {
+            font-size: 14px;
+          }
+
+          .label {
+            font-size: 12px;
+          }
+
+          .small {
+            font-size: 10px;
+          }
+        </style>
+      </defs>
+
+      <!-- Title -->
+      <text x="500" y="30" text-anchor="middle" class="title">TP and PP GPU Communication Diagram</text>
+
+      <!-- GPUs -->
+      <g id="gpus">
+        <rect x="50" y="50" width="200" height="1150" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="300" y="50" width="200" height="1150" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="550" y="50" width="200" height="1150" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="800" y="50" width="200" height="1150" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
+        <text x="150" y="80" text-anchor="middle" class="subtitle">GPU 0</text>
+        <text x="400" y="80" text-anchor="middle" class="subtitle">GPU 1</text>
+        <text x="650" y="80" text-anchor="middle" class="subtitle">GPU 2</text>
+        <text x="900" y="80" text-anchor="middle" class="subtitle">GPU 3</text>
+      </g>
+
+      <!-- Input Initialization -->
+      <g id="input-init">
+        <text x="10" y="120" class="subtitle">Input Initialization</text>
+        <rect x="75" y="130" width="150" height="40" fill="#ffcc99" stroke="#ff6600" stroke-width="2" />
+        <text x="150" y="155" text-anchor="middle" class="label">Input (32x50)</text>
+        <line x1="225" y1="150" x2="380" y2="220" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="275" y="140" text-anchor="middle" class="small">dist.broadcast TP Group [0, 1]</text>
+      </g>
+
+      <!-- Hidden Layer 1 -->
+      <g id="hidden-layer-1">
+        <text x="10" y="220" class="subtitle">Hidden Layer 1</text>
+        <rect x="75" y="230" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="150" y="255" text-anchor="middle" class="label">Output (32x25)</text>
+        <rect x="325" y="230" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="400" y="255" text-anchor="middle" class="label">Output (32x25)</text>
+        <line x1="150" y1="270" x2="150" y2="310" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <line x1="400" y1="270" x2="400" y2="310" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="275" y="290" text-anchor="middle" class="small">dist.all_gather TP Group [0, 1]</text>
+        <rect x="75" y="320" width="400" height="40" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
+        <text x="275" y="345" text-anchor="middle" class="label">Concatenated Output (32x50)</text>
+      </g>
+
+      <!-- Hidden Layer 2 -->
+      <g id="hidden-layer-2">
+        <text x="10" y="420" class="subtitle">Hidden Layer 2</text>
+        <rect x="75" y="430" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="150" y="455" text-anchor="middle" class="label">Output (32x25)</text>
+        <rect x="325" y="430" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="400" y="455" text-anchor="middle" class="label">Output (32x25)</text>
+        <line x1="150" y1="470" x2="150" y2="510" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <line x1="400" y1="470" x2="400" y2="510" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="275" y="490" text-anchor="middle" class="small">dist.all_gather TP Group [0, 1]</text>
+        <rect x="75" y="520" width="400" height="40" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
+        <text x="275" y="545" text-anchor="middle" class="label">Concatenated Output (32x50)</text>
+        <line x1="275" y1="560" x2="650" y2="610" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="500" y="580" text-anchor="middle" class="small">dist.broadcast PP Group [0, 2]</text>
+      </g>
+
+      <!-- Hidden Layer 3 -->
+      <g id="hidden-layer-3">
+        <text x="510" y="620" class="subtitle">Hidden Layer 3</text>
+        <rect x="575" y="630" width="150" height="40" fill="#ffcc99" stroke="#ff6600" stroke-width="2" />
+        <text x="650" y="655" text-anchor="middle" class="label">Input (32x50)</text>
+        <line x1="725" y1="650" x2="875" y2="720" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="775" y="640" text-anchor="middle" class="small">dist.broadcast TP Group [2, 3]</text>
+        <rect x="575" y="730" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="650" y="755" text-anchor="middle" class="label">Output (32x25)</text>
+        <rect x="825" y="730" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="900" y="755" text-anchor="middle" class="label">Output (32x25)</text>
+        <line x1="650" y1="770" x2="650" y2="810" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <line x1="900" y1="770" x2="900" y2="810" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="775" y="790" text-anchor="middle" class="small">dist.all_gather TP Group [2, 3]</text>
+        <rect x="575" y="820" width="400" height="40" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
+        <text x="775" y="845" text-anchor="middle" class="label">Concatenated Output (32x50)</text>
+      </g>
+
+      <!-- Hidden Layer 4 -->
+      <g id="hidden-layer-4">
+        <text x="510" y="920" class="subtitle">Hidden Layer 4</text>
+        <rect x="575" y="930" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="650" y="955" text-anchor="middle" class="label">Output (32x25)</text>
+        <rect x="825" y="930" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="900" y="955" text-anchor="middle" class="label">Output (32x25)</text>
+        <line x1="650" y1="970" x2="650" y2="1010" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <line x1="900" y1="970" x2="900" y2="1010" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="775" y="990" text-anchor="middle" class="small">dist.all_gather TP Group [2, 3]</text>
+        <rect x="575" y="1020" width="400" height="40" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
+        <text x="775" y="1045" text-anchor="middle" class="label">Concatenated Output (32x50)</text>
+      </g>
+
+      <!-- Final Output -->
+      <g id="final-output">
+        <text x="510" y="1120" class="subtitle">Final Output</text>
+        <rect x="675" y="1130" width="200" height="40" fill="#ffff99" stroke="#999900" stroke-width="2" />
+        <text x="775" y="1155" text-anchor="middle" class="label">Output (32x50)</text>
+        <text x="775" y="1180" text-anchor="middle" class="small">Ready to pass back to CPU</text>
+      </g>
+    </svg>
+    <p>Cool is not it? Now let's go to the implementation. For distributed framework we decided to use <a
+        href="https://www.ray.io/">Ray</a> <b>(Please sponsor us something)</b> because we do
+      not have a node with 4 GPUs, but we got 2 nodes with each 2 GPUs, so we connect those nodes using Ray inside
+      Tailscale VPN.</p>
+    <p>Why Ray? Ray is cool, nice UI, and the important parts are, <b>node auto discovery and automatic distributed
+        execution</b>.
+    </p>
+    <p>What does means by node auto discovery and automatic distributed execution? actually Torch Elastic Distributed
+      support multi-nodes natively, you must
+      set rendezvous backend, <a
+        href="https://pytorch.org/docs/stable/elastic/run.html#note-on-rendezvous-backend">https://pytorch.org/docs/stable/elastic/run.html#note-on-rendezvous-backend</a>
+    </p>
+    <pre>
+```bash
+torchrun
+--nnodes=$NUM_NODES
+--nproc-per-node=$NUM_TRAINERS
+--rdzv-id=$JOB_ID
+--rdzv-backend=c10d
+--rdzv-endpoint=$HOST_NODE_ADDR
+YOUR_TRAINING_SCRIPT.py
+```</pre>
+    <p>- `$NUM_NODES` must set equal to the size of nodes.</p>
+    <p>- `$NUM_TRAINERS` must set equal to the size of GPUs.</p>
+    <p>- `$JOB_ID` can set any ID, if you have multiple jobs, you must set different ID.</p>
+    <p>- `$HOST_NODE_ADDR` is the first node or the fastest node you have, and it will elect as host.</p>
+    <p>Now we have 2 nodes and each node got 2 GPUs, with IPs `100.93.25.29` and `100.92.17.27`, so to run using
+      torchrun,</p>
+    <p>In `100.93.25.29`,</p>
+    <pre>
+```bash
+torchrun \
+--nnodes=2 --nproc_per_node=2 \
+--rdzv_id=1234 --rdzv_backend=c10d --rdzv_endpoint=100.93.25.29:29500 train.py
+```</pre>
+    <p>And in `100.92.17.27`, you have to run the same thing,</p>
+    <pre>
+```bash
+torchrun \
+--nnodes=2 --nproc_per_node=2 \
+--rdzv_id=1234 --rdzv_backend=c10d --rdzv_endpoint=100.93.25.29:29500 train.py
+```</pre>
+    <p>Which is tedious, and each nodes must got the same script plus you must know the head of IP address! But in Ray,
+      you do not have to do this, you just run the script anywhere as long the script connected to the Ray head and Ray
+      will automatically distribute the script to another nodes.</p>
 
     <p>---</p>
     <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
