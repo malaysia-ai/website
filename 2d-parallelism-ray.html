@@ -207,9 +207,8 @@
     <p>- The number of GPUs required is, M PP x N TP, if M = 2 and N = 2, we need 4 GPUs. 1 PP 2 TP means, all
       hidden
       layers inside the same GPU 0, but the weights sharded with GPU 1, so it required 2 GPUs.</p>
-    <p>- Because the hidden layers been splitted into M devices, and each weight been sharded by N, so GPU memory saved
-      by
-      M x N!</p>
+    <p>- Because the hidden layers are split across M devices, and each weight is sharded by N, GPU memory is saved by a
+      factor of M x N!</p>
     <p>- This 2D Parallelism communication groups are like below,</p>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
       <defs>
