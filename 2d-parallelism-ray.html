@@ -48,7 +48,7 @@
 <body>
 
   <div id="maincontent" style="margin-top: 70px">
-    <h2>2D Parallelism using Ray PyTorch</h2>
+    <h2>2D Parallelism using PyTorch in Ray</h2>
     <p>Last time we already covered <a href="/tp-pytorch">Tensor Parallelism</a>
       using PyTorch Distributed Elastic and little bit of Pipeline Parallelism, but did you know that you can combine
       Tensor Parallelism and Pipeline
@@ -289,157 +289,6 @@
     </svg>
     <p>- TP Group: [0, 1] is the TP communication group for GPU 0 and GPU 1, PP Group: [0, 2] is the PP communication
       group for GPU 0 and GPU 2, and TP Group: [2, 3] is the TP communication group for GPU 2 and GPU 3.</p>
-    <p>- Assumed I have 4 hidden layers, each hidden layer got a linear layer with size 50x50. Because each hidden
-      layer been TP, so GPU 0 50x25, GPU 1 50x25, GPU 2 50x25 and GPU 3 50x25.</p>
-    <p>-- 1. the input with size 32x50 will initialize at GPU 0, this will broadcast using `dist.broadcast` to GPU 1
-      using TP Group: [0, 1].</p>
-    <p>-- 2. On the first hidden layer, now GPU 0 input 32x50 matmul 50x25 = 32x25, GPU 1 input 32x50 matmul 50x25 =
-      32x25, and do `dist.all_gather`. So GPU 0 and GPU 1 will got the same list of matrices [32x25, 32x25], and GPU 0
-      and
-      GPU 1 will do concatenation on the last dimension, so it will become 32x50, ready to pass to second hidden layer.
-    </p>
-    <p>-- 3. On the second hidden layer, now GPU 0 input 32x50 matmul 50x25 = 32x25, GPU 1 input 32x50 matmul 50x25 =
-      32x25, and do `dist.all_gather`. So GPU 0 and GPU 1 will got the same list of matrices [32x25, 32x25], and GPU 0
-      and
-      GPU 1 will do concatenation on the last dimension, so it will become 32x50, ready to broadcast to GPU 2 using PP
-      Group: [0, 2].</p>
-    <p>-- 4. GPU 0 will broadcast using `dist.broadcast` to GPU 2 using PP Group: [0, 2], so GPU 2 input is 32x50.</p>
-    <p>-- 5. GPU 2 will broadcast using `dist.broadcast` to GPU 3 using TP Group: [2, 3], so GPU 3 input is 32x50.</p>
-    <p>-- 6. On the third hidden layer, now GPU 2 input 32x50 matmul 50x25 = 32x25, GPU 3 input 32x50 matmul 50x25 =
-      32x25, and do `dist.all_gather`. So GPU 2 and GPU 3 will got the same list of matrices [32x25, 32x25], and GPU 0
-      and
-      GPU 1 will do concatenation on the last dimension, so it will become 32x50, ready to pass to fourth hidden layer.
-    </p>
-    <p>-- 7. On the fourth hidden layer, now GPU 2 input 32x50 matmul 50x25 = 32x25, GPU 3 input 32x50 matmul 50x25 =
-      32x25, and do `dist.all_gather`. So GPU 2 and GPU 3 will got the same list of matrices [32x25, 32x25], and GPU 2
-      and
-      GPU 3 will do concatenation on the last dimension, so it will become 32x50, ready to pass back to CPU.</p>
-    <p>- The data movement as below,</p>
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1050 1250">
-      <!-- Styles -->
-      <defs>
-        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
-          <polygon points="0 0, 10 3.5, 0 7" fill="#000" />
-        </marker>
-        <style type="text/css">
-          text {
-            font-family: Arial, sans-serif;
-          }
-
-          .title {
-            font-size: 16px;
-            font-weight: bold;
-          }
-
-          .subtitle {
-            font-size: 14px;
-          }
-
-          .label {
-            font-size: 12px;
-          }
-
-          .small {
-            font-size: 10px;
-          }
-        </style>
-      </defs>
-
-      <!-- Title -->
-      <text x="500" y="30" text-anchor="middle" class="title">TP and PP GPU Communication Diagram</text>
-
-      <!-- GPUs -->
-      <g id="gpus">
-        <rect x="50" y="50" width="200" height="1150" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
-        <rect x="300" y="50" width="200" height="1150" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
-        <rect x="550" y="50" width="200" height="1150" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
-        <rect x="800" y="50" width="200" height="1150" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
-        <text x="150" y="80" text-anchor="middle" class="subtitle">GPU 0</text>
-        <text x="400" y="80" text-anchor="middle" class="subtitle">GPU 1</text>
-        <text x="650" y="80" text-anchor="middle" class="subtitle">GPU 2</text>
-        <text x="900" y="80" text-anchor="middle" class="subtitle">GPU 3</text>
-      </g>
-
-      <!-- Input Initialization -->
-      <g id="input-init">
-        <text x="10" y="120" class="subtitle">Input Initialization</text>
-        <rect x="75" y="130" width="150" height="40" fill="#ffcc99" stroke="#ff6600" stroke-width="2" />
-        <text x="150" y="155" text-anchor="middle" class="label">Input (32x50)</text>
-        <line x1="225" y1="150" x2="380" y2="220" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
-        <text x="275" y="140" text-anchor="middle" class="small">dist.broadcast TP Group [0, 1]</text>
-      </g>
-
-      <!-- Hidden Layer 1 -->
-      <g id="hidden-layer-1">
-        <text x="10" y="220" class="subtitle">Hidden Layer 1</text>
-        <rect x="75" y="230" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
-        <text x="150" y="255" text-anchor="middle" class="label">Output (32x25)</text>
-        <rect x="325" y="230" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
-        <text x="400" y="255" text-anchor="middle" class="label">Output (32x25)</text>
-        <line x1="150" y1="270" x2="150" y2="310" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
-        <line x1="400" y1="270" x2="400" y2="310" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
-        <text x="275" y="290" text-anchor="middle" class="small">dist.all_gather TP Group [0, 1]</text>
-        <rect x="75" y="320" width="400" height="40" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
-        <text x="275" y="345" text-anchor="middle" class="label">Concatenated Output (32x50)</text>
-      </g>
-
-      <!-- Hidden Layer 2 -->
-      <g id="hidden-layer-2">
-        <text x="10" y="420" class="subtitle">Hidden Layer 2</text>
-        <rect x="75" y="430" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
-        <text x="150" y="455" text-anchor="middle" class="label">Output (32x25)</text>
-        <rect x="325" y="430" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
-        <text x="400" y="455" text-anchor="middle" class="label">Output (32x25)</text>
-        <line x1="150" y1="470" x2="150" y2="510" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
-        <line x1="400" y1="470" x2="400" y2="510" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
-        <text x="275" y="490" text-anchor="middle" class="small">dist.all_gather TP Group [0, 1]</text>
-        <rect x="75" y="520" width="400" height="40" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
-        <text x="275" y="545" text-anchor="middle" class="label">Concatenated Output (32x50)</text>
-        <line x1="275" y1="560" x2="640" y2="625" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
-        <text x="500" y="580" text-anchor="middle" class="small">dist.broadcast PP Group [0, 2]</text>
-      </g>
-
-      <!-- Hidden Layer 3 -->
-      <g id="hidden-layer-3">
-        <text x="510" y="620" class="subtitle">Hidden Layer 3</text>
-        <rect x="575" y="630" width="150" height="40" fill="#ffcc99" stroke="#ff6600" stroke-width="2" />
-        <text x="650" y="655" text-anchor="middle" class="label">Input (32x50)</text>
-        <line x1="725" y1="650" x2="875" y2="720" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
-        <text x="775" y="640" text-anchor="middle" class="small">dist.broadcast TP Group [2, 3]</text>
-        <rect x="575" y="730" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
-        <text x="650" y="755" text-anchor="middle" class="label">Output (32x25)</text>
-        <rect x="825" y="730" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
-        <text x="900" y="755" text-anchor="middle" class="label">Output (32x25)</text>
-        <line x1="650" y1="770" x2="650" y2="810" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
-        <line x1="900" y1="770" x2="900" y2="810" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
-        <text x="775" y="790" text-anchor="middle" class="small">dist.all_gather TP Group [2, 3]</text>
-        <rect x="575" y="820" width="400" height="40" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
-        <text x="775" y="845" text-anchor="middle" class="label">Concatenated Output (32x50)</text>
-      </g>
-
-      <!-- Hidden Layer 4 -->
-      <g id="hidden-layer-4">
-        <text x="510" y="920" class="subtitle">Hidden Layer 4</text>
-        <rect x="575" y="930" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
-        <text x="650" y="955" text-anchor="middle" class="label">Output (32x25)</text>
-        <rect x="825" y="930" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
-        <text x="900" y="955" text-anchor="middle" class="label">Output (32x25)</text>
-        <line x1="650" y1="970" x2="650" y2="1010" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
-        <line x1="900" y1="970" x2="900" y2="1010" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
-        <text x="775" y="990" text-anchor="middle" class="small">dist.all_gather TP Group [2, 3]</text>
-        <rect x="575" y="1020" width="400" height="40" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
-        <text x="775" y="1045" text-anchor="middle" class="label">Concatenated Output (32x50)</text>
-      </g>
-
-      <!-- Final Output -->
-      <g id="final-output">
-        <text x="510" y="1120" class="subtitle">Final Output</text>
-        <rect x="675" y="1130" width="200" height="40" fill="#ffff99" stroke="#999900" stroke-width="2" />
-        <text x="775" y="1155" text-anchor="middle" class="label">Output (32x50)</text>
-        <text x="775" y="1180" text-anchor="middle" class="small">Ready to pass back to CPU</text>
-      </g>
-    </svg>
-    <p>Cool is not it? Now let's go to the implementation.</p>
     <h3>PyTorch in Ray</h3>
     <p>For distributed framework we decided to use <a href="https://www.ray.io/">Ray</a> <b>(Please sponsor us
         something)</b> because we do
@@ -618,7 +467,8 @@ def main():
 if __name__ == "__main__":
     main()
 ```</pre>
-    <p>And save it as `test-ray.py`. In order to use PyTorch Distributed in Ray, you must use `TorchTrainer`. If you
+    <p>And save it as `test-ray.py`. If you have 4 GPUs, set `num_workers=4`, one worker equal to one GPU if
+      `use_gpu=True`. In order to use PyTorch Distributed in Ray, you must use `TorchTrainer`. If you
       look at the source code of
       `TorchTrainer`, <a
         href="https://github.com/ray-project/ray/blob/master/python/ray/train/torch/config.py#L153">https://github.com/ray-project/ray/blob/master/python/ray/train/torch/config.py#L153</a>,
@@ -647,15 +497,11 @@ python3 test-ray.py
 ```text
 (TunerInternal pid=14055) Training started without custom configuration.
 (RayTrainWorker pid=2180081, ip=100.92.17.27) Setting up process group for: env:// [rank=0, world_size=4]
-(RayTrainWorker pid=14207) [W Utils.hpp:133] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function getCvarInt)
-(RayTrainWorker pid=14206) [W Utils.hpp:133] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function getCvarInt)
 (TorchTrainer pid=2179995, ip=100.92.17.27) Started distributed worker processes: 
 (TorchTrainer pid=2179995, ip=100.92.17.27) - (ip=100.92.17.27, pid=2180081) world_rank=0, local_rank=0, node_rank=0
 (TorchTrainer pid=2179995, ip=100.92.17.27) - (ip=100.92.17.27, pid=2180082) world_rank=1, local_rank=1, node_rank=0
 (TorchTrainer pid=2179995, ip=100.92.17.27) - (ip=100.93.25.29, pid=14206) world_rank=2, local_rank=0, node_rank=1
 (TorchTrainer pid=2179995, ip=100.92.17.27) - (ip=100.93.25.29, pid=14207) world_rank=3, local_rank=1, node_rank=1
-(RayTrainWorker pid=2180081, ip=100.92.17.27) [W Utils.hpp:133] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function getCvarInt)
-(RayTrainWorker pid=2180082, ip=100.92.17.27) [W Utils.hpp:133] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function getCvarInt)
 (RayTrainWorker pid=14207) 1 3 4 1
 (RayTrainWorker pid=14206) 0 2 4 1
 (RayTrainWorker pid=2180081, ip=100.92.17.27) 0 0 4 0
@@ -670,7 +516,333 @@ python3 test-ray.py
 (TorchTrainer pid=2179995, ip=100.92.17.27) - (ip=100.93.25.29, pid=14207) world_rank=3, local_rank=1, node_rank=1
 ```</pre>
     <p>Here you can clearly see local ranks, node ranks and world ranks.</p>
+    <h3>Actual 2D Parallelism</h3>
+    <p>Now the actual 2D Parallelism, it is quite simple actually,</p>
+    <pre>
+```python
+import torch
+import torch.nn as nn
+import torch.distributed as dist
+import os
+import ray
+from ray import train
+from ray.train import ScalingConfig
+from ray.train.torch import TorchTrainer
 
+class Linear(nn.Module):
+    def __init__(self, in_features, out_features, group, ranks):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+
+        self.rank = int(os.environ['RANK'])
+        self.local_rank = int(os.environ['LOCAL_RANK'])
+        self.group = group
+        self.ranks = ranks
+        self.group_rank = dist.get_group_rank(self.group, self.rank)
+        self.world_size = group.size()
+        self.device = f'cuda:{self.local_rank}'
+
+        self.local_in_features = in_features 
+        self.local_out_features = out_features // self.world_size
+
+        self.linear = nn.Linear(self.local_in_features, self.local_out_features)
+    
+    def forward(self, x, batch_size, broadcast = True):
+
+        if broadcast:
+            if self.group_rank == 0:
+                dist.broadcast(x, src=self.ranks[0], group=self.group)
+            else:
+                x = torch.zeros(batch_size, self.local_in_features, device=self.device)
+                dist.broadcast(x, src=self.ranks[0], group=self.group)
+
+        local_output = self.linear(x)
+        
+        gathered_out = [torch.zeros_like(local_output) for _ in range(self.world_size)]
+        
+        dist.all_gather(gathered_out, local_output, group = self.group)
+        gathered_out = torch.cat(gathered_out, dim=-1)
+
+        print(self.rank, gathered_out.shape)
+
+        return gathered_out
+
+def func():
+    rank = int(os.environ['RANK'])
+
+    tp_group1 = dist.new_group([0, 1])
+    tp_group2 = dist.new_group([2, 3])
+    pp_group = dist.new_group([0, 2])
+
+    batch_size = 32
+    input_shape = 50
+    output_shape = 4
+
+    if rank in [0, 1]:
+        linear1 = Linear(input_shape, input_shape, tp_group1, [0, 1])
+        linear1 = linear1.to(linear1.device)
+        linear2 = Linear(input_shape, input_shape, tp_group1, [0, 1])
+        linear2 = linear2.to(linear2.device)
+        linear3 = None
+        linear4 = None
+    else:
+        linear1 = None
+        linear2 = None
+        linear3 = Linear(input_shape, input_shape, tp_group2, [2, 3])
+        linear3 = linear3.to(linear3.device)
+        linear4 = Linear(input_shape, output_shape, tp_group2, [2, 3])
+        linear4 = linear4.to(linear4.device)
+
+    if rank in [0, 1]:
+        if rank == 0:
+            input_tensor = torch.randn(batch_size, input_shape, device=linear1.device)
+        else:
+            input_tensor = None
+        
+        out1 = linear1(input_tensor, batch_size, broadcast = True)
+        out2 = linear2(out1, batch_size, broadcast = False)
+
+        if rank == 0:
+            dist.broadcast(out2, src=0, group = pp_group)
+    else:
+        if rank == 2:
+            out2 = torch.zeros(batch_size, input_shape, device=linear3.device)
+            dist.broadcast(out2, src=0, group = pp_group)
+        else:
+            out2 = None
+        
+        out3 = linear3(out2, batch_size, broadcast = True)
+        out4 = linear4(out3, batch_size, broadcast = False)
+        print(out4.shape)
+
+def main():
+    runtime_env = {
+        'env_vars': {
+            'NCCL_SOCKET_IFNAME': 'tailscale0',
+        }
+    }
+    ray.init(address="ray://localhost:10001", runtime_env = runtime_env)
+    scaling_config = ScalingConfig(
+        num_workers=4,
+        use_gpu=True,
+    )
+    
+    ray_trainer = TorchTrainer(
+        func,
+        scaling_config=scaling_config,
+    )
+    ray_trainer.fit()
+
+if __name__ == "__main__":
+    main()
+```</pre>
+    <p>Save it as `2d-parallelism.py` and run it,</p>
+    <pre>
+```bash
+python3 2d-parallelism.py
+```</pre>
+    <p>The output,</p>
+    <pre>
+```bash
+(RayTrainWorker pid=2423679) 1 torch.Size([32, 50])
+(RayTrainWorker pid=2423679) 1 torch.Size([32, 50])
+(RayTrainWorker pid=2423678) 0 torch.Size([32, 50])
+(RayTrainWorker pid=2423678) 0 torch.Size([32, 50])
+(RayTrainWorker pid=2284881, ip=100.92.17.27) 3 torch.Size([32, 50])
+(RayTrainWorker pid=2284881, ip=100.92.17.27) 3 torch.Size([32, 4])
+(RayTrainWorker pid=2284881, ip=100.92.17.27) torch.Size([32, 4])
+(RayTrainWorker pid=2284880, ip=100.92.17.27) 2 torch.Size([32, 50])
+(RayTrainWorker pid=2284880, ip=100.92.17.27) 2 torch.Size([32, 4])
+(RayTrainWorker pid=2284880, ip=100.92.17.27) torch.Size([32, 4])
+```</pre>
+    <p>You can see `3 torch.Size([32, 4])`, which is the last output that we want. So the flow is like,</p>
+    <p>- 1. You need to make sure you set `'NCCL_SOCKET_IFNAME': 'tailscale0'`. Because we use Tailscale, we set it
+      `tailscale0`, verify using `ifconfig`. This is to let NCCL know which network need
+      to use for the communication. You can put multiple networks split by commas.</p>
+    <p>- 2. Initialize communication group,</p>
+    <p>-- i. `tp_group1 = dist.new_group([0, 1])` between GPU 0 and GPU 1.</p>
+    <p>-- ii. `tp_group2 = dist.new_group([2, 3])` between GPU 2 and GPU 3.</p>
+    <p>-- iii. `pp_group = dist.new_group([0, 2])` between GPU 0 and GPU 2.</p>
+    <p>- 3. Initialize all the layers using If-Else statement, you can do it better to support dynamic layers.</p>
+    <p>-- i. `if rank in [0, 1]: linear1 = Linear(input_shape, input_shape, tp_group1, [0, 1])`. GPU 0 and GPU 1 both
+      initialized `linear1` with the communication `tp_group1`.</p>
+    <p>-- ii. `if rank in [0, 1]: linear2 = Linear(input_shape, input_shape, tp_group1, [0, 1])`. GPU 0 and GPU 1 both
+      initialized `linear2` with the communication `tp_group1`.</p>
+    <p>-- iii. `if rank in [2, 3]: linear3 = Linear(input_shape, input_shape, tp_group2, [2, 3])`. GPU 2 and GPU 3 both
+      initialized `linear3` with the communication `tp_group2`.</p>
+    <p>-- iv. `if rank in [0, 1]: linear4 = Linear(input_shape, input_shape, tp_group2, [2, 3])`. GPU 3 and GPU 3 both
+      initialized `linear4` with the communication `tp_group2`.</p>
+    <p>- 4. `def __init__(self, in_features, out_features, group, ranks)` The reason why we pass the `ranks` is to make
+      sure during the broadcast, the broadcaster come from the local group `src`, `dist.broadcast(x, src=self.ranks[0],
+      group=self.group)`.</p>
+    <p>- 5. `self.group_rank = dist.get_group_rank(self.group, self.rank)` this also to get the ranks based on the
+      group, if the group is [2, 3], so the group rank is [0, 1]. When group is rank == 0, we can do broadcast if you
+      want.</p>
+    <p>- 6. `self.device = f'cuda:{self.local_rank}'`. The reason why `self.device` must use local rank because, as we
+      know, we got 2 nodes, each node with 2 GPUs, even though the second GPU and the second node is rank 3, but local
+      rank is 1. So you must initialize as `cuda:1` at the second node.</p>
+    <p>- 7. We initialized 4 hidden layers, each hidden layer got a linear layer with size 50x50, except for the last
+      layer
+      is 50x4.
+      Because each hidden
+      layer been TP,</p>
+    <p>-- first layer, GPU 0 50x25 GPU 1 50x25.</p>
+    <p>-- second layer, GPU 0 50x25 GPU 1 50x25.</p>
+    <p>-- third layer, GPU 2 50x25 GPU 3 50x25.</p>
+    <p>-- fourth layer, GPU 2 50x2 GPU 3 50x2.</p>
+    <p>- The data flow,</p>
+    <p>- 8. the input with size 32x50 will initialize at GPU 0, this will broadcast using `dist.broadcast` to GPU 1
+      using TP Group: [0, 1].</p>
+    <p>- 9. On the first hidden layer, now GPU 0 input 32x50 matmul 50x25 = 32x25, GPU 1 input 32x50 matmul 50x25 =
+      32x25, and do `dist.all_gather`. So GPU 0 and GPU 1 will got the same list of matrices [32x25, 32x25], and GPU 0
+      and
+      GPU 1 will do concatenation on the last dimension, so it will become 32x50, ready to pass to second hidden layer.
+    </p>
+    <p>- 10. On the second hidden layer, now GPU 0 input 32x50 matmul 50x25 = 32x25, GPU 1 input 32x50 matmul 50x25 =
+      32x25, and do `dist.all_gather`. So GPU 0 and GPU 1 will got the same list of matrices [32x25, 32x25], and GPU 0
+      and
+      GPU 1 will do concatenation on the last dimension, so it will become 32x50, ready to broadcast to GPU 2 using PP
+      Group: [0, 2].</p>
+    <p>- 11. GPU 0 will broadcast using `dist.broadcast` to GPU 2 using PP Group: [0, 2], so GPU 2 input is 32x50.</p>
+    <p>- 12. GPU 2 will broadcast using `dist.broadcast` to GPU 3 using TP Group: [2, 3], so GPU 3 input is 32x50.</p>
+    <p>- 13. On the third hidden layer, now GPU 2 input 32x50 matmul 50x25 = 32x25, GPU 3 input 32x50 matmul 50x25 =
+      32x25, and do `dist.all_gather`. So GPU 2 and GPU 3 will got the same list of matrices [32x25, 32x25], and GPU 0
+      and
+      GPU 1 will do concatenation on the last dimension, so it will become 32x50, ready to pass to fourth hidden layer.
+    </p>
+    <p>- 14. On the fourth hidden layer, now GPU 2 input 32x50 matmul 50x2 = 32x2, GPU 3 input 32x50 matmul 50x2 =
+      32x2, and do `dist.all_gather`. So GPU 2 and GPU 3 will got the same list of matrices [32x2, 32x2], and GPU 2
+      and
+      GPU 3 will do concatenation on the last dimension, so it will become 32x4, ready to pass back to CPU.</p>
+
+    <p>- 15. The data movement is like below,</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1050 1250">
+      <!-- Styles -->
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#000" />
+        </marker>
+        <style type="text/css">
+          text {
+            font-family: Arial, sans-serif;
+          }
+
+          .title {
+            font-size: 16px;
+            font-weight: bold;
+          }
+
+          .subtitle {
+            font-size: 14px;
+          }
+
+          .label {
+            font-size: 12px;
+          }
+
+          .small {
+            font-size: 10px;
+          }
+        </style>
+      </defs>
+
+      <!-- Title -->
+      <text x="500" y="30" text-anchor="middle" class="title">TP and PP GPU Communication Diagram inside
+        tailscale0</text>
+
+      <!-- GPUs -->
+      <g id="gpus">
+        <rect x="50" y="50" width="200" height="1150" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="300" y="50" width="200" height="1150" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="550" y="50" width="200" height="1150" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
+        <rect x="800" y="50" width="200" height="1150" fill="#e6f3ff" stroke="#0066cc" stroke-width="2" />
+        <text x="150" y="80" text-anchor="middle" class="subtitle">GPU 0, 100.93.25.29</text>
+        <text x="400" y="80" text-anchor="middle" class="subtitle">GPU 1, 100.93.25.29</text>
+        <text x="650" y="80" text-anchor="middle" class="subtitle">GPU 2, 100.92.17.27</text>
+        <text x="900" y="80" text-anchor="middle" class="subtitle">GPU 3, 100.92.17.27</text>
+      </g>
+
+      <!-- Input Initialization -->
+      <g id="input-init">
+        <text x="10" y="120" class="subtitle">Input Initialization</text>
+        <rect x="75" y="130" width="150" height="40" fill="#ffcc99" stroke="#ff6600" stroke-width="2" />
+        <text x="150" y="155" text-anchor="middle" class="label">Input (32x50)</text>
+        <line x1="225" y1="150" x2="380" y2="220" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="275" y="140" text-anchor="middle" class="small">dist.broadcast TP Group [0, 1]</text>
+      </g>
+
+      <!-- Hidden Layer 1 -->
+      <g id="hidden-layer-1">
+        <text x="10" y="220" class="subtitle">Hidden Layer 1</text>
+        <rect x="75" y="230" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="150" y="255" text-anchor="middle" class="label">Output (32x25)</text>
+        <rect x="325" y="230" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="400" y="255" text-anchor="middle" class="label">Output (32x25)</text>
+        <line x1="150" y1="270" x2="150" y2="310" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <line x1="400" y1="270" x2="400" y2="310" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="275" y="290" text-anchor="middle" class="small">dist.all_gather TP Group [0, 1]</text>
+        <rect x="75" y="320" width="400" height="40" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
+        <text x="275" y="345" text-anchor="middle" class="label">Concatenated Output (32x50)</text>
+      </g>
+
+      <!-- Hidden Layer 2 -->
+      <g id="hidden-layer-2">
+        <text x="10" y="420" class="subtitle">Hidden Layer 2</text>
+        <rect x="75" y="430" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="150" y="455" text-anchor="middle" class="label">Output (32x25)</text>
+        <rect x="325" y="430" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="400" y="455" text-anchor="middle" class="label">Output (32x25)</text>
+        <line x1="150" y1="470" x2="150" y2="510" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <line x1="400" y1="470" x2="400" y2="510" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="275" y="490" text-anchor="middle" class="small">dist.all_gather TP Group [0, 1]</text>
+        <rect x="75" y="520" width="400" height="40" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
+        <text x="275" y="545" text-anchor="middle" class="label">Concatenated Output (32x50)</text>
+        <line x1="275" y1="560" x2="640" y2="625" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="500" y="580" text-anchor="middle" class="small">dist.broadcast PP Group [0, 2]</text>
+      </g>
+
+      <!-- Hidden Layer 3 -->
+      <g id="hidden-layer-3">
+        <text x="510" y="620" class="subtitle">Hidden Layer 3</text>
+        <rect x="575" y="630" width="150" height="40" fill="#ffcc99" stroke="#ff6600" stroke-width="2" />
+        <text x="650" y="655" text-anchor="middle" class="label">Input (32x50)</text>
+        <line x1="725" y1="650" x2="875" y2="720" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="775" y="640" text-anchor="middle" class="small">dist.broadcast TP Group [2, 3]</text>
+        <rect x="575" y="730" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="650" y="755" text-anchor="middle" class="label">Output (32x25)</text>
+        <rect x="825" y="730" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="900" y="755" text-anchor="middle" class="label">Output (32x25)</text>
+        <line x1="650" y1="770" x2="650" y2="810" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <line x1="900" y1="770" x2="900" y2="810" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="775" y="790" text-anchor="middle" class="small">dist.all_gather TP Group [2, 3]</text>
+        <rect x="575" y="820" width="400" height="40" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
+        <text x="775" y="845" text-anchor="middle" class="label">Concatenated Output (32x50)</text>
+      </g>
+
+      <!-- Hidden Layer 4 -->
+      <g id="hidden-layer-4">
+        <text x="510" y="920" class="subtitle">Hidden Layer 4</text>
+        <rect x="575" y="930" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="650" y="955" text-anchor="middle" class="label">Output (32x2)</text>
+        <rect x="825" y="930" width="150" height="40" fill="#ccffcc" stroke="#009900" stroke-width="2" />
+        <text x="900" y="955" text-anchor="middle" class="label">Output (32x2)</text>
+        <line x1="650" y1="970" x2="650" y2="1010" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <line x1="900" y1="970" x2="900" y2="1010" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="775" y="990" text-anchor="middle" class="small">dist.all_gather TP Group [2, 3]</text>
+        <rect x="575" y="1020" width="400" height="40" fill="#99ccff" stroke="#0066cc" stroke-width="2" />
+        <text x="775" y="1045" text-anchor="middle" class="label">Concatenated Output (32x4)</text>
+      </g>
+
+      <!-- Final Output -->
+      <g id="final-output">
+        <text x="510" y="1120" class="subtitle">Final Output</text>
+        <rect x="675" y="1130" width="200" height="40" fill="#ffff99" stroke="#999900" stroke-width="2" />
+        <text x="775" y="1155" text-anchor="middle" class="label">Output (32x4)</text>
+        <text x="775" y="1180" text-anchor="middle" class="small">Ready to pass back to CPU</text>
+      </g>
+    </svg>
+    <p>Super cool right?</p>
     <p>---</p>
     <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
   </div>
