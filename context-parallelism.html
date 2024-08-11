@@ -1,0 +1,333 @@
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- HTML Meta Tags -->
+  <title>Malaysia-AI blog Context Parallelism using Ray PyTorch</title>
+  <meta name="description" content="Malaysia-AI blog Context Parallelism">
+
+  <!-- Facebook Meta Tags -->
+  <meta property="og:url" content="https://malaysia-ai.org/context-parallelism">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Malaysia-AI blog Context Parallelism using Ray PyTorch">
+  <meta property="og:description" content="Malaysia-AI blog Context Parallelism using Ray PyTorch">
+  <meta property="og:image" content="https://malaysia-ai.org/context-parallelism.png">
+
+  <!-- Twitter Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="twitter:domain" content="malaysia-ai.org">
+  <meta property="twitter:url" content="https://malaysia-ai.org/context-parallelism">
+  <meta name="twitter:title" content="Malaysia-AI blog Context Parallelism using Ray PyTorch">
+  <meta name="twitter:description" content="Malaysia-AI blog Context Parallelism">
+  <meta name="twitter:image" content="https://malaysia-ai.org/context-parallelism.png">
+
+  <!-- Meta Tags Generated via https://www.opengraph.xyz -->
+
+  <style>
+    body {
+      line-height: 1.4;
+      font-size: 16px;
+      padding: 0 10px;
+      margin: 50px auto;
+      max-width: 1000px;
+    }
+
+    #maincontent {
+      max-width: 62em;
+      margin: 15 auto;
+    }
+
+    pre {
+      margin-top: 0px;
+      white-space: break-spaces;
+    }
+  </style>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script>
+    window.MathJax = {
+      options: {
+        enableMenu: false
+      }
+    };
+  </script>
+</head>
+
+<body>
+
+  <div id="maincontent" style="margin-top: 70px">
+    <h2>Context Parallelism using Ray PyTorch</h2>
+    <p>As you can see, Large Language Model is taking over the world, everyone is using it, and it able to augment
+      humanity productivity and intelligence beyond what we expect.</p>
+    <p>You can chat with the LLM to do practically everything you want, from roleplaying as a baby up to asking feedback
+      loops for research papers that you do not understand.</p>
+    <p>During ChatGPT released on November 30, 2022, it only support max 4096 context length or 4096 tokens, 1 token
+      average 2 words based on ChatGPT tokenizer, so 8192 words. Let use chat bubbles below as an example, green chat
+      bubbles is the user while
+      gray chat bubbles is the assistant,</p>
+    <svg width="450" height="250" xmlns="http://www.w3.org/2000/svg">
+      <!-- User bubble -->
+      <rect x="10" y="20" width="160" height="30" rx="10" ry="10" fill="#DCF8C6" />
+      <text x="20" y="40" font-family="Arial" font-size="14" fill="#000">hello</text>
+
+      <!-- Assistant bubble -->
+      <rect x="230" y="80" width="200" height="30" rx="10" ry="10" fill="#ECECEC" />
+      <text x="240" y="100" font-family="Arial" font-size="14" fill="#000">Hi! How can I help you?</text>
+
+      <!-- User bubble -->
+      <rect x="10" y="140" width="190" height="30" rx="10" ry="10" fill="#DCF8C6" />
+      <text x="20" y="160" font-family="Arial" font-size="14" fill="#000">do u know about Malaysia?</text>
+
+      <!-- Assistant bubble -->
+      <rect x="230" y="200" width="200" height="30" rx="10" ry="10" fill="#ECECEC" />
+      <text x="240" y="220" font-family="Arial" font-size="14" fill="#000">Of course I know Malaysia!</text>
+    </svg>
+    <p>For this example, let us assume 1 token equal to 1 word, so the words are ['hello', 'hi!', 'How', 'can', 'I',
+      'help', 'you?', 'do', 'u', 'know', 'about', 'Malaysia?', 'Of', 'course', 'I', 'know', 'about', 'Malaysia!'], 18
+      words or 18 tokens. So when when say the LLM support 4096 context length, it can support multi-turn conversation
+      will the total 4096 tokens.</p>
+    <p>Today, LLM can support million tokens of context length, Gemini from Google can support up to 1 million tokens of
+      context length, you can give an entire book or research paper and ask any question that you want!</p>
+    <svg width="450" height="250" xmlns="http://www.w3.org/2000/svg">
+      <!-- User bubble -->
+      <rect x="10" y="20" width="160" height="30" rx="10" ry="10" fill="#DCF8C6" />
+      <text x="20" y="40" font-family="Arial" font-size="14" fill="#000">hello</text>
+
+      <!-- Assistant bubble -->
+      <rect x="230" y="80" width="200" height="30" rx="10" ry="10" fill="#ECECEC" />
+      <text x="240" y="100" font-family="Arial" font-size="14" fill="#000">Hi! How can I help you?</text>
+
+      <!-- User bubble -->
+      <rect x="10" y="140" width="320" height="30" rx="10" ry="10" fill="#DCF8C6" />
+      <text x="20" y="160" font-family="Arial" font-size="14" fill="#000">based on this paper bla bla .., what is bla
+        bla ..?</text>
+
+      <!-- Assistant bubble -->
+      <rect x="110" y="200" width="320" height="30" rx="10" ry="10" fill="#ECECEC" />
+      <text x="120" y="220" font-family="Arial" font-size="14" fill="#000">Based on the page 3, the answer is bla bla
+        ..</text>
+    </svg>
+    <p><b>From 4096 context length up to 1 million context length in less than 2 years!</b></p>
+    <p>How does LLM able to understand from just 4096 tokens to become 1 million tokens? Context Parallelism!</a>But
+      before that, we need to know the memory usage of Attention mechanism,</p>
+
+    <h3>Attention is all you need!</h3>
+    <p>And Attention mechanism defined as,</p>
+
+    <div>
+      $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right) V$$
+    </div>
+    <p>Where `Q` is query matrix, `K` is key matrix, and `V` is value matrix. LLM is decoder model so the attention
+      happened is self-attention. Now for an example,
+      ,
+    </p>
+    <p>- Hidden size or `d_model` for QKV is 10, so QKV with each size [2, 10], 2 input dimension, 10 hidden dimension.
+    </p>
+    <p>- the input shape is [5, 2], 5 sequence length or `L`, 2 hidden dimension or `in_d_model`.</p>
+    <p>- Input will matmul with
+      QKV matrices,</p>
+    <p>- 1. input [5,2] matmul Q [2, 10] = [5, 10]</p>
+    <p>- 2. input [5,2] matmul K [2, 10] = [5, 10]</p>
+    <p>- 3. input [5,2] matmul V [2, 10] = [5, 10]</p>
+    <p>- 4. After that calculate Attention,</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+      <!-- Q matrix -->
+      <rect x="50" y="50" width="100" height="50" fill="#FFB3BA" stroke="black" />
+      <text x="100" y="80" text-anchor="middle" dominant-baseline="middle" font-size="10">Q [5x10]</text>
+
+      <!-- K.T matrix -->
+      <rect x="200" y="50" width="50" height="100" fill="#BAFFC9" stroke="black" />
+      <text x="225" y="100" text-anchor="middle" dominant-baseline="middle" font-size="10">K.T [10x5]</text>
+
+      <!-- QK.T result -->
+      <rect x="300" y="50" width="50" height="50" fill="#BAE1FF" stroke="black" />
+      <text x="325" y="80" text-anchor="middle" dominant-baseline="middle" font-size="10">QK.T [5x5]</text>
+
+      <!-- Softmax -->
+      <rect x="400" y="50" width="50" height="50" fill="#FFDFBA" stroke="black" />
+      <text x="425" y="80" text-anchor="middle" dominant-baseline="middle" font-size="10">Softmax</text>
+
+      <!-- V matrix -->
+      <rect x="500" y="50" width="100" height="50" fill="#FFFFBA" stroke="black" />
+      <text x="550" y="80" text-anchor="middle" dominant-baseline="middle" font-size="10">V [5x10]</text>
+
+      <!-- Final result -->
+      <rect x="650" y="50" width="100" height="50" fill="#E6BAFF" stroke="black" />
+      <text x="700" y="80" text-anchor="middle" dominant-baseline="middle" font-size="10">Result [5x10]</text>
+
+      <!-- Arrows -->
+      <line x1="150" y1="75" x2="190" y2="75" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+      <line x1="250" y1="75" x2="290" y2="75" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+      <line x1="350" y1="75" x2="390" y2="75" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+      <line x1="450" y1="75" x2="490" y2="75" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+      <line x1="600" y1="75" x2="640" y2="75" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+
+      <!-- Arrowhead definition -->
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+          <polygon points="0 0, 5 3.5, 0 7" />
+        </marker>
+      </defs>
+
+      <!-- Labels -->
+      <text x="175" y="60" text-anchor="middle" font-size="14">matmul</text>
+      <text x="275" y="60" text-anchor="middle" font-size="14">matmul</text>
+      <text x="375" y="60" text-anchor="middle" font-size="14">apply</text>
+      <text x="475" y="60" text-anchor="middle" font-size="14">matmul</text>
+      <text x="625" y="60" text-anchor="middle" font-size="14">matmul</text>
+
+      <!-- Legend -->
+      <text x="50" y="200" font-size="16" font-weight="bold">Legend:</text>
+      <rect x="50" y="220" width="20" height="20" fill="#FFB3BA" stroke="black" />
+      <text x="80" y="235" font-size="14">Q matrix</text>
+      <rect x="50" y="250" width="20" height="20" fill="#BAFFC9" stroke="black" />
+      <text x="80" y="265" font-size="14">K.T matrix</text>
+      <rect x="50" y="280" width="20" height="20" fill="#BAE1FF" stroke="black" />
+      <text x="80" y="295" font-size="14">QK.T result</text>
+      <rect x="50" y="310" width="20" height="20" fill="#FFDFBA" stroke="black" />
+      <text x="80" y="325" font-size="14">Softmax</text>
+      <rect x="50" y="340" width="20" height="20" fill="#FFFFBA" stroke="black" />
+      <text x="80" y="355" font-size="14">V matrix</text>
+      <rect x="50" y="370" width="20" height="20" fill="#E6BAFF" stroke="black" />
+      <text x="80" y="385" font-size="14">Final result</text>
+    </svg>
+    <p>The output shape should be [Q `L`, V `d_model`] = [5, 10]. To calculate the memory usage roughly <b>based on
+        output
+        shape</b>,</p>
+    <p>- 1. Q, K and V linear weights, which each output is [in_d_model, d_model], <b>3 x in_d_model x d_model</b>.</p>
+    <p>- 2. input matmul Q, K and V, which each output is [L, d_model], <b>3 x L x d_model</b>.</p>
+    <p>- 3. softmax(QK.T)V, [L, d_model], <b>L x d_model</b>.</p>
+    <p>- 4. Total, (3 * in_d_model * d_model) + (3 * L * d_model) + (L * d_model) = 260.</p>
+    <p>- 7. Assumed we store in bfloat16, 260 x 2 = <b>520 bytes</b>.</p>
+
+    <p>520 bytes is super small and yes that is for a simple example, but what if we use at least LLM 8B parameters such
+      as Llama 3.1?</p>
+    <h3>Use actual Llama 3.1 8B parameters</h3>
+    <p>Based on the Llama 3.1 8B parameters settings from HuggingFace, <a
+        href="https://huggingface.co/meta-llama/Meta-Llama-3.1-8B/blob/main/config.json">https://huggingface.co/meta-llama/Meta-Llama-3.1-8B/blob/main/config.json</a>,
+      there are 3 settings important for attention size,
+    <p>- 1. `hidden_size` = 4096.</p>
+    <p>- 2. `num_attention_heads` = 32.</p>
+    <p>Because Llama use multi-head attention and <b>to simplify the attention, assumed no group multi-head attention
+        been used aka
+        `num_key_value_heads`</b>, assume the input shape is [5, 4096], 5 sequence length with 4096 hidden size, so
+      during calculating the attention,</p>
+    <p>- 1. `head_dim` = hidden_size // num_attention_heads</p>
+    <p>- 2. Q, K, V linear weights [hidden_size, num_attention_heads x head_dim], <b>3 x hidden_size x
+        num_attention_heads x head_dim</b>.
+    </p>
+    <p>- 3. input matmul Q, K and V, which each output is [L, num_attention_heads x head_dim] and reshape become
+      [num_attention_heads, L,
+      head_dim], <b>3 x L x num_attention_heads x head_dim</b>.</p>
+    <p>- 4. softmax(QK.T)V = [num_attention_heads, L, head_dim], <b>num_attention_heads x L x head_dim</b>.</p>
+    <p>- 5. Total, (3 * hidden_size * num_attention_heads * head_dim) + (3 * L * num_attention_heads * head_dim) +
+      (num_attention_heads * L * head_dim) = 50413568.
+    </p>
+    <p>- 6. Assumed we store in bfloat16, 50413568 x 2 = <b>100827136 bytes or 0.100827136 GB</b>, still small.</p>
+    <p>Now what if you got 1M sequence length or 1M context length? replace the `L` with 1M, you got 16434331648
+      bytes, saved as bfloat16, <b>16434331648 x 2 = 32868663296 bytes or 32.868663296 GB!</b></p>
+    <p><b>32.868663296 GB</b> just for the attention, not included other linear layers and other matmul operations,
+      insane. How about 13B or 70B parameters? kebabom!</p>
+    <h3>Context Parallelism</h3>
+    <p>When we talk about Parallelism in deep learning, it is about how to parallelize the data into multiple GPUs
+      either to reduce computation burden and at the same reduce memory consumption or replicating the replica to
+      increase the
+      size of input to make learning process faster, and Context Parallelism is about
+      how to parallelize the sequence length into multiple GPUs.</p>
+    <div style="width: 60%">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 1000">
+        <!-- Original Matrix -->
+        <rect x="200" y="20" width="200" height="80" fill="#A0D8EF" stroke="black" />
+        <text x="300" y="60" text-anchor="middle" font-size="14">Original Matrix</text>
+        <text x="300" y="80" text-anchor="middle" font-size="12">[1, 1000000, 512]</text>
+
+        <!-- Arrow -->
+        <line x1="300" y1="100" x2="300" y2="150" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+
+        <!-- Split Matrices -->
+        <rect x="50" y="170" width="150" height="70" fill="#FFD700" stroke="black" />
+        <text x="125" y="200" text-anchor="middle" font-size="14">GPU 1</text>
+        <text x="125" y="220" text-anchor="middle" font-size="12">[1, 500000, 512]</text>
+
+        <rect x="400" y="170" width="150" height="70" fill="#98FB98" stroke="black" />
+        <text x="475" y="200" text-anchor="middle" font-size="14">GPU 2</text>
+        <text x="475" y="220" text-anchor="middle" font-size="12">[1, 500000, 512]</text>
+
+        <!-- Arrows to Local Attention -->
+        <line x1="125" y1="240" x2="125" y2="290" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+        <line x1="475" y1="240" x2="475" y2="290" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+
+        <!-- Local Attention -->
+        <rect x="50" y="310" width="150" height="70" fill="#FFD700" stroke="black" />
+        <text x="125" y="340" text-anchor="middle" font-size="14">Local Attention</text>
+        <text x="125" y="360" text-anchor="middle" font-size="12">Calculation</text>
+
+        <rect x="400" y="310" width="150" height="70" fill="#98FB98" stroke="black" />
+        <text x="475" y="340" text-anchor="middle" font-size="14">Local Attention</text>
+        <text x="475" y="360" text-anchor="middle" font-size="12">Calculation</text>
+
+        <!-- Arrows to Linear Layer -->
+        <line x1="125" y1="380" x2="125" y2="430" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+        <line x1="475" y1="380" x2="475" y2="430" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+
+        <!-- Linear Layer -->
+        <rect x="50" y="450" width="150" height="70" fill="#DDA0DD" stroke="black" />
+        <text x="125" y="480" text-anchor="middle" font-size="14">Linear Layer</text>
+        <text x="125" y="500" text-anchor="middle" font-size="12">Output Logits</text>
+
+        <rect x="400" y="450" width="150" height="70" fill="#DDA0DD" stroke="black" />
+        <text x="475" y="480" text-anchor="middle" font-size="14">Linear Layer</text>
+        <text x="475" y="500" text-anchor="middle" font-size="12">Output Logits</text>
+
+        <!-- Arrows to Loss Calculation -->
+        <line x1="125" y1="520" x2="125" y2="570" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+        <line x1="475" y1="520" x2="475" y2="570" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+
+        <!-- Loss Calculation -->
+        <rect x="50" y="590" width="150" height="70" fill="#F08080" stroke="black" />
+        <text x="125" y="620" text-anchor="middle" font-size="14">Loss Calculation</text>
+        <text x="125" y="640" text-anchor="middle" font-size="12">GPU 1 Loss</text>
+
+        <rect x="400" y="590" width="150" height="70" fill="#F08080" stroke="black" />
+        <text x="475" y="620" text-anchor="middle" font-size="14">Loss Calculation</text>
+        <text x="475" y="640" text-anchor="middle" font-size="12">GPU 2 Loss</text>
+
+        <!-- Arrows to Loss Gathering -->
+        <line x1="125" y1="660" x2="125" y2="740" stroke="black" stroke-width="2" />
+        <line x1="475" y1="660" x2="475" y2="740" stroke="black" stroke-width="2" />
+        <line x1="125" y1="740" x2="300" y2="740" stroke="black" stroke-width="2" />
+        <line x1="475" y1="740" x2="300" y2="740" stroke="black" stroke-width="2" />
+        <line x1="300" y1="740" x2="300" y2="780" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+
+        <!-- Loss Gathering -->
+        <rect x="200" y="800" width="200" height="80" fill="#90EE90" stroke="black" />
+        <text x="300" y="830" text-anchor="middle" font-size="14">Gather Losses</text>
+        <text x="300" y="850" text-anchor="middle" font-size="12">Average Loss</text>
+
+        <!-- Labels -->
+        <text x="300" y="920" text-anchor="middle" font-size="16" font-weight="bold">Context Parallelism</text>
+        <text x="300" y="940" text-anchor="middle" font-size="14">Separate Logits and Loss</text>
+        <text x="300" y="960" text-anchor="middle" font-size="14">Calculation per GPU</text>
+
+        <!-- Arrowhead definition -->
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" />
+          </marker>
+        </defs>
+      </svg>
+    </div>
+    <p>So now each GPUs can calculate their own local attention but still coherent with the other local attentions and
+      if you gather and combine the local attentions, the combined should be almost the same with the full attention
+      with super super small different.</p>
+
+
+
+
+    <p>---</p>
+    <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
+  </div>
+</body>
+
+</html>
