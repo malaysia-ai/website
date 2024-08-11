@@ -321,8 +321,70 @@
     <p>So now each GPUs can calculate their own local attention but still coherent with the other local attentions and
       if you gather and combine the local attentions, the combined should be almost the same with the full attention
       with super super small different.</p>
+    <p>If we split the QKV into N GPUs,</p>
+    <p>1. QK is a matmul for sequence length, how does Q1 able to correlate with K2 or K3?</p>
+    <p>2. how does to calculate local attention for each GPUs? As you can see, Attention mechanism required to
+      calculate softmax function and softmax function required to divide by sum of exponents,</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+      <!-- Input matrix (QK.T result) -->
+      <rect x="50" y="50" width="100" height="100" fill="#BAE1FF" stroke="black" />
+      <text x="100" y="30" text-anchor="middle" font-size="16">QK.T [5x5]</text>
 
+      <!-- Exponentiation -->
+      <rect x="250" y="50" width="100" height="100" fill="#FFB3BA" stroke="black" />
+      <text x="300" y="30" text-anchor="middle" font-size="16">exp(QK.T)</text>
 
+      <!-- Sum of exponents -->
+      <rect x="450" y="50" width="20" height="100" fill="#BAFFC9" stroke="black" />
+      <text x="460" y="30" text-anchor="middle" font-size="16">Sum</text>
+
+      <!-- Division result -->
+      <rect x="550" y="50" width="100" height="100" fill="#FFDFBA" stroke="black" />
+      <text x="600" y="30" text-anchor="middle" font-size="16">Softmax Output</text>
+
+      <!-- Arrows -->
+      <line x1="150" y1="100" x2="250" y2="100" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+      <text x="200" y="90" text-anchor="middle" font-size="14">exp(x)</text>
+
+      <line x1="350" y1="100" x2="450" y2="100" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+      <text x="400" y="90" text-anchor="middle" font-size="14">sum last dim</text>
+
+      <path d="M 470 100 C 500 100, 500 100, 530 100" fill="none" stroke="black" stroke-width="2"
+        marker-end="url(#arrowhead)" />
+      <line x1="350" y1="100" x2="530" y2="100" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+      <text x="510" y="90" text-anchor="middle" font-size="14">divide</text>
+
+      <!-- Arrowhead definition -->
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" />
+        </marker>
+      </defs>
+
+      <!-- Detailed explanation -->
+      <text x="50" y="200" font-size="16" font-weight="bold">Softmax Operation:</text>
+      <text x="50" y="230" font-size="14">1. Apply exp(x) to each element of QK.T</text>
+      <text x="50" y="260" font-size="14">2. Sum the exponentiated values along the last dimension</text>
+      <text x="50" y="290" font-size="14">3. Divide each exponentiated value by the sum</text>
+
+      <!-- Matrix representation -->
+      <text x="50" y="330" font-size="16" font-weight="bold">Matrix Representation:</text>
+      <text x="50" y="360" font-size="14">Input [5x5]:</text>
+      <text x="50" y="390" font-size="14">[a11 a12 a13 a14 a15]</text>
+      <text x="50" y="420" font-size="14">[a21 a22 a23 a24 a25]</text>
+      <text x="50" y="450" font-size="14">[...]</text>
+
+      <text x="300" y="360" font-size="14">Softmax Output [5x5]:</text>
+      <text x="300" y="390" font-size="14">[s11 s12 s13 s14 s15]</text>
+      <text x="300" y="420" font-size="14">[s21 s22 s23 s24 s25]</text>
+      <text x="300" y="450" font-size="14">[...]</text>
+
+      <text x="550" y="360" font-size="14">Where:</text>
+      <text x="550" y="390" font-size="14">sij = exp(aij) / Σ exp(aik)</text>
+      <text x="550" y="420" font-size="14">k = 1 to 5 (last dimension)</text>
+    </svg>
+
+    <p></p>
 
 
     <p>---</p>
