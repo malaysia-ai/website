@@ -451,7 +451,7 @@
       <p>-- ii. Store maxj in maxi, maxi = [maxj0, maxj1, ...] and Attentionj in Attentioni, Attentioni = [Attentionj0,
         Attentionj1, ...]</p>
       <p>- 2. Calculate max_maxi = max(maxi), loop again KV blocks, j,</p>
-      <p>-- i. Calculate blockwisej = (QiKj^T - max_maxi) Attentionij, and store it in blockwisei, blockwisei =
+      <p>-- i. Calculate blockwisej = exp(QiKj^T - max_maxi) Attentionij, and store it in blockwisei, blockwisei =
         [blockwisej0, blockwisej1, ...]</p>
       <p>-- ii. Sum, now you got Attention(Qi,K,V)!</p>
     </div>
