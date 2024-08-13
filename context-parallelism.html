@@ -4,21 +4,21 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- HTML Meta Tags -->
-  <title>Malaysia-AI blog Context Parallelism using Ray PyTorch</title>
+  <title>Malaysia-AI blog Context Parallelism</title>
   <meta name="description" content="Malaysia-AI blog Context Parallelism">
 
   <!-- Facebook Meta Tags -->
   <meta property="og:url" content="https://malaysia-ai.org/context-parallelism">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Malaysia-AI blog Context Parallelism using Ray PyTorch">
-  <meta property="og:description" content="Malaysia-AI blog Context Parallelism using Ray PyTorch">
+  <meta property="og:title" content="Malaysia-AI blog Context Parallelism">
+  <meta property="og:description" content="Malaysia-AI blog Context Parallelism">
   <meta property="og:image" content="https://malaysia-ai.org/context-parallelism.png">
 
   <!-- Twitter Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
   <meta property="twitter:domain" content="malaysia-ai.org">
   <meta property="twitter:url" content="https://malaysia-ai.org/context-parallelism">
-  <meta name="twitter:title" content="Malaysia-AI blog Context Parallelism using Ray PyTorch">
+  <meta name="twitter:title" content="Malaysia-AI blog Context Parallelismh">
   <meta name="twitter:description" content="Malaysia-AI blog Context Parallelism">
   <meta name="twitter:image" content="https://malaysia-ai.org/context-parallelism.png">
 
@@ -57,7 +57,7 @@
 <body>
 
   <div id="maincontent" style="margin-top: 70px">
-    <h2>Context Parallelism using Ray PyTorch</h2>
+    <h2>Context Parallelism</h2>
     <p>As you can see, Large Language Model is taking over the world, everyone is using it, and it able to augment
       humanity productivity and intelligence beyond what we expect.</p>
     <p>You can chat with the LLM to do practically everything you want, from roleplaying as a baby up to asking feedback
@@ -234,7 +234,7 @@
       either to reduce computation burden and at the same reduce memory consumption or replicating the replica to
       increase the
       size of input to make learning process faster, and Context Parallelism is about
-      how to parallelize the sequence length into multiple GPUs.</p>
+      how to parallelize the sequence length into multiple GPUs. Let say I have 2 GPUs, so the partition size is 2,</p>
     <div style="width: 60%">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 1000">
         <!-- Original Matrix -->
@@ -321,7 +321,7 @@
     </div>
     <p>So now each GPUs can calculate their own local attention but still coherent with the other local attentions and
       if you gather and combine the local attentions, the combined should be almost the same with the full attention
-      with super super small different.</p>
+      with super super small different, and <b>you save GPU memory is saved by a factor of partition size!</b></p>
 
     <p>If we split the QKV into 2 GPUs, Q = [Q1, Q2], K = [K1, K2], V = [V1, V2], so local attentions,
       Attention1=softmax(Q1K1^T)V1
@@ -330,15 +330,119 @@
     <p><b>Now, how does softmax(Q1K1^T)V1 able to correlate with softmax(Q2K2^T)V2 ?</b> Especially on softmax, because
       softmax required sum of exponents on the hidden dimension.</p>
 
-    <h3>Blockwise Parallel Transformer
-      for Large Context Models</h3>
+    <h3>Blockwise Parallel Transformer for Large Context Models</h3>
     <p>This paper <a href="https://arxiv.org/pdf/2305.19370">https://arxiv.org/pdf/2305.19370</a> shows that we can
-      calculate Attention in partition manner, and when we talk about partition manner, the partitions can be
-      incrementally
-      load from RAM / disk offload by simply loop the partitions and pass to GPU to do the calculation, or split the
-      partitions into multi GPUs.</p>
-    <p>This Attention in partition manner or blocks called Blockwise Attention by the paper.</p>
-    <p>In section 3, it stated Q can split into Bq blocks, and KV split into Bkv blocks.</p>
+      calculate Attention in blockwise manner on multiple devices.</p>
+    <p>And this paper also mentioned `Self-attention can be computed in a blockwise manner without materializing the
+      softmax
+      attention
+      matrix` which already done from <a href="https://arxiv.org/abs/2205.14135">Flash Attention: 2205.14135</a> and <a
+        href="https://arxiv.org/abs/2112.05682">Self-attention does not need o(n2) memory: 2112.05682</a></p>
+    <h4>Flash Attention</h4>
+    <p>"Flash Attention" partitioned QKV into blocks inside the GPU and write in CUDA kernel and optimized the
+      movement
+      between GPU high bandwidth memory (HBM)
+      and GPU on-chip SRAM, become more "io-awareness" by directly manipulating the memory hierarchy using CUDA
+      interface. Flash Attention also
+      calculate the attention using blockwise manner
+      inside CUDA blocks.</p>
+    <img src="/flash-attention.png" width="40%">
+    <br>
+    <img src="/flash-attention-1.png" width="40%">
+    <p>- As you can see there are outer and inner loops, defined as, loop for each KV blocks, nested loop for each Q
+      blocks, and calculate local max and local attention, gather local max to get global max and for each local
+      attention
+      minus with global max to get the global attention.</p>
+    <h4>Self-attention does not need o(n2) memory</h4>
+    <p>While "Self-attention does not need o(n2) memory" write using Jax to compute the blockwise, it is not as
+      efficient as "Flash Attention" because Jax handled all the memories and there is no interface to make it
+      "io-awareness" like "Flash Attention". The implementation,</p>
+    <pre>
+```python
+import functools, jax, math
+from jax import lax
+from jax import numpy as jnp
+
+
+def _query_chunk_attention(query,
+                           key,
+                           value,
+                           key_chunk_size=4096,
+                           precision=lax.Precision.HIGHEST,
+                           dtype=jnp.float32):
+  num_kv, num_heads, k_features = key.shape
+  v_features = value.shape[-1]
+  key_chunk_size = min(key_chunk_size, num_kv)
+  query = query / jnp.sqrt(k_features).astype(dtype)
+
+  @functools.partial(jax.checkpoint, prevent_cse=False)
+  def summarize_chunk(query, key, value):
+    attn_weights = jnp.einsum(
+        'qhd,khd->qhk', query, key, precision=precision).astype(dtype)
+    max_score = jnp.max(attn_weights, axis=-1, keepdims=True)
+    max_score = jax.lax.stop_gradient(max_score)
+    exp_weights = jnp.exp(attn_weights - max_score)
+    exp_values = jnp.einsum(
+        'vhf,qhv->qhf', value, exp_weights, precision=precision).astype(dtype)
+    return (exp_values, exp_weights.sum(axis=-1),
+            max_score.reshape((query.shape[0], num_heads)))
+
+  def chunk_scanner(chunk_idx):
+    key_chunk = lax.dynamic_slice(
+        key, (chunk_idx, 0, 0),
+        slice_sizes=(key_chunk_size, num_heads, k_features))
+    value_chunk = lax.dynamic_slice(
+        value, (chunk_idx, 0, 0),
+        slice_sizes=(key_chunk_size, num_heads, v_features))
+    return summarize_chunk(query, key_chunk, value_chunk)
+
+  chunk_values, chunk_weights, chunk_max = lax.map(
+      chunk_scanner, xs=jnp.arange(0, num_kv, key_chunk_size))
+
+  global_max = jnp.max(chunk_max, axis=0, keepdims=True)
+  max_diffs = jnp.exp(chunk_max - global_max)
+  chunk_values *= jnp.expand_dims(max_diffs, axis=-1)
+  chunk_weights *= max_diffs
+
+  all_values = chunk_values.sum(axis=0)
+  all_weights = jnp.expand_dims(chunk_weights, -1).sum(axis=0)
+  return all_values / all_weights
+
+
+def mefficient_attention(query,
+                         key,
+                         value,
+                         query_chunk_size=1024,
+                         precision=jax.lax.Precision.HIGHEST,
+                         dtype=jnp.float32):
+  num_q, num_heads, q_features = query.shape
+
+  def chunk_scanner(chunk_idx, _):
+    query_chunk = lax.dynamic_slice(
+        query, (chunk_idx, 0, 0),
+        slice_sizes=(min(query_chunk_size, num_q), num_heads, q_features))
+    return (chunk_idx + query_chunk_size,
+            _query_chunk_attention(
+                query_chunk, key, value, precision=precision, dtype=dtype))
+
+  _, res = lax.scan(
+      chunk_scanner,
+      init=0,
+      xs=None,
+      length=math.ceil(num_q / query_chunk_size))
+  return res.reshape(num_q, num_heads, value.shape[-1])
+```</pre>
+    <p>- But basically is the same, loop Q blocks, loop nested KV blocks, and calculate local max and local attention,
+      gather local max to get global max and for each local
+      attention
+      minus with global max to get the global attention.</p>
+    <p>But "Flash Attention" and "Self-attention does not need o(n2) memory" partitioned the QKV into blocks happened
+      inside
+      a single GPU, not for multi-GPUs. And actually, <b>"Blockwise Parallel Transformer for Large Context
+        Models" take inspiration directly from "Self-attention does not need o(n2) memory"</b>, but just do it on
+      multi-GPUs level.</p>
+    <p>In section 3, it stated Q can split into Bq blocks, and KV split into Bkv blocks, same as "Flash Attention" and
+      "Self-attention does not need o(n2) memory".</p>
     <p>- 1. For each query block, the blockwise attention Attention(Qi, Kj, Vj) can be computed by iterating over all
       key-value
       blocks,</p>
@@ -368,6 +472,19 @@
     <div>
       $$
       \mathrm{Attention}(Q_i, K, V) = \bigl[ \exp(Q_i K_j^T - \mathrm{max}_i)~\mathrm{Attention}(Q_i, K_j, V_j)
+      \bigr]_{j=1}^{B_{kv}}
+      $$
+    </div>
+    <p>- 4. But I believe there is a mistake to calculate <span>\(\mathrm{Attention}(Q_i, K, V)\),</span></p>
+    <p>-- i. <span>\(Q_i K_j^T\)</span> shape is [L, L] while <span>\(\mathrm{Attention}(Q_i, K, V)\)</span> shape is
+      [L, dim], so we cannot do hadamard product.</p>
+    <p>-- ii. <span>It should be \(\exp(\max(Q_i K_j^T) - \mathrm{max}_i)\), so the shape will become [L], so when we do
+        hadamard product, [L] o [L, dim], PyTorch will automatically repeat [L], [L, L, ...] become [L, dim] then we can
+        do [L, dim] o [L, dim].</span></p>
+    <p>--- iii. Actual equation should be, </p>
+    <div>
+      $$
+      \mathrm{Attention}(Q_i, K, V) = \bigl[ \exp(\max(Q_i K_j^T) - \mathrm{max}_i)~\mathrm{Attention}(Q_i, K_j, V_j)
       \bigr]_{j=1}^{B_{kv}}
       $$
     </div>
@@ -410,13 +527,13 @@
 
         <!-- Scaled block attentions -->
         <rect x="100" y="550" width="180" height="60" fill="#00ffff" stroke="#000000" stroke-width="2" />
-        <text x="190" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">exp(QiK0^T -
+        <text x="190" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">exp(max(Qi,K0) -
           global_max)</text>
         <text x="190" y="595" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">*
           Attention(Qi,K0,V0)</text>
 
         <rect x="320" y="550" width="180" height="60" fill="#00ffff" stroke="#000000" stroke-width="2" />
-        <text x="410" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">exp(QiK1^T -
+        <text x="410" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">exp(max(Qi,K1) -
           global_max)</text>
         <text x="410" y="595" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">*
           Attention(Qi,K1,V1)</text>
@@ -472,24 +589,98 @@
     <p>-- ii. Store maxj in maxi, maxi = [maxj0, maxj1, ...] and Attentionj in Attentioni, Attentioni = [Attentionj0,
       Attentionj1, ...]</p>
     <p>- 2. Calculate max_maxi = max(maxi), loop again KV blocks, j,</p>
-    <p>-- i. Calculate blockwisej = exp(QiKj^T - max_maxi) Attentionij, and store it in blockwisei, blockwisei =
+    <p>-- i. Calculate blockwisej = exp(maxj - max_maxi) x Attentionj, and store it in blockwisei, blockwisei =
       [blockwisej0, blockwisej1, ...]</p>
-    <p>-- ii. Sum, now you got Attention(Qi,K,V)!</p>
+    <p>-- ii. Sum blockwisei, now you got Attention(Qi,K,V)!</p>
     <h3>PyTorch code using Loop</h3>
     <p>To test if it is working, we have to compare by doing full attention vs blockwise attention, after that we
       compare
       the full attention on the first partition size with the first blockwise attention,</p>
-    <h3>Now why it is working?</h3>
+    <pre>
+```python
+import torch
+import torch.nn.functional as F
+
+Q = torch.randn(100, 128).cuda().to(torch.bfloat16)
+K = torch.randn(100, 128).cuda().to(torch.bfloat16)
+V = torch.randn(100, 128).cuda().to(torch.bfloat16)
+
+full_attention = torch.matmul(F.softmax(torch.matmul(Q, K.T), dim = -1), V)
+
+chunk_size = 2
+Q_blocks = torch.chunk(Q, chunk_size)
+K_blocks = torch.chunk(K, chunk_size)
+V_blocks = torch.chunk(V, chunk_size)
+
+Q_block = Q_blocks[0]
+block_attentions = []
+block_maxes = []
+
+for K_block, V_block in zip(K_blocks, V_blocks):
+    # Compute attention scores
+    scores = torch.matmul(Q_block, K_block.T)
+
+    # Compute block-wise max
+    block_max = scores.max(dim=-1, keepdim=True)[0]
+    block_maxes.append(block_max)
+
+    # Compute block-wise attention
+    block_attention = torch.matmul(F.softmax(scores - block_max, dim=-1), V_block)
+    block_attentions.append(block_attention)
+
+# Compute global max
+global_max = torch.max(torch.cat(block_maxes, dim=-1), dim=-1, keepdim=True)[0]
+
+# Scale and combine block attentions
+scaled_attentions = [
+    torch.exp(block_max - global_max) * block_attention
+    for block_max, block_attention in zip(block_maxes, block_attentions)
+]
+
+output = sum(scaled_attentions)
+```</pre>
+    <p>Exact match signs,</p>
+    <pre>
+```python
+(torch.sign(full_attention[:output.shape[0]]) == torch.sign(output)).float().mean()
+```</pre>
+    <p>Output,</p>
+    <pre>
+```text
+tensor(0.9958, device='cuda:0')
+```</pre>
+    <p>Check different on `argmax(-1)`,</p>
+    <pre>
+```python
+print(full_attention[:output.shape[0]].argmax(-1), output.argmax(-1))
+```</pre>
+    <p>Output,</p>
+    <pre>
+```text
+tensor([122,  84,  27,  20,  98,  60,  36,  65,  39,  48,  31,  91,  48,  69,
+         80,  98,  59, 121,   0,  24,  42,  67,  76,  58,  36,  34,  79,   1,
+         57,  99,   9,  47,  77, 110,   9,   9, 119,   9,  34,  27,   6,  37,
+        104, 121, 103, 123,   0,  56,  67, 104], device='cuda:0') 
+
+tensor([122,  84,  27,  20,  98,  60,  36,  65,  39,  48,  31,  91,  48,  69,
+         80,  98,  59, 121,   0,  24,  42,  39,  76,  58,  36,  34,  79,   1,
+         57,  40,   9,  47,  77, 110,   9,   9, 119,   9,  34,  27,   6,  37,
+        104, 121, 103, 123,   0,  56,  67, 104], device='cuda:0')
+```</pre>
+    <p>You can continue to run for Q blocks or Bq blocks. <b>As you can see, this blockwise is exactly as
+        "Self-attention does not need o(n2) memory", just in PyTorch.</b></p>
+
+
     <h3>Use PyTorch distributed</h3>
-    <p>Because right now we only got 2 machines with each 1 GPU, so we have to do multi-nodes to use 2 GPUs, and we are
-      going to use
-      Ray
-      framework for Torch Elastic Distributed, and we already explained at <a
-        href="https://malaysia-ai.org/2d-parallelism-ray">https://malaysia-ai.org/2d-parallelism-ray</a>, <b>TLDR,
-        basically Ray just a wrapper around Torch Elastic Distributed same like `torchrun` command.</b></p>
     <p>Now we have to convert from loop execution to parallel execution using Torch Elastic Distributed, for me, if you
       want to do parallel execution, at first you must test it using loop execution, if it works, convert it to parallel
       execution.</p>
+
+    <h3>Improvement</h3>
+    <p><a href="https://arxiv.org/abs/2310.01889">Ring Attention: 2310.01889</a> from the same authors to improve this
+      Blockwise Attention by simply reduce the communication between nodes by using ring communication.</p>
+    <p>And recently there is <a href="https://arxiv.org/abs/2408.04093">Tree Attention: 2408.04093</a> to improve Ring
+      Attention by aggregating the max(KV.T) on tree hierarchy, which is only make sense for multi-nodes.</p>
 
     <p>---</p>
     <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
