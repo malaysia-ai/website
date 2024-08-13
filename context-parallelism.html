@@ -441,6 +441,35 @@ def mefficient_attention(query,
       gather local max to get global max and for each local
       attention
       minus with global max to get the global attention.</p>
+    <p>-- i. Chunk Q into blocks,</p>
+    <pre>
+```python
+query_chunk = lax.dynamic_slice(
+        query, (chunk_idx, 0, 0),
+        slice_sizes=(min(query_chunk_size, num_q), num_heads, q_features))
+```</pre>
+    <p>-- ii. Calculate QiKj^T,</p>
+    <pre>
+```python
+attn_weights = jnp.einsum('qhd,khd->qhk', query, key, precision=precision).astype(dtype)
+```</pre>
+    <p>-- iii. Calculate local max,</p>
+    <pre>
+```python
+max_score = jnp.max(attn_weights, axis=-1, keepdims=True)
+```</pre>
+    <p>-- iv. Calculate blockwise Attention,</p>
+    <pre>
+```python
+global_max = jnp.max(chunk_max, axis=0, keepdims=True)
+max_diffs = jnp.exp(chunk_max - global_max)
+chunk_values *= jnp.expand_dims(max_diffs, axis=-1)
+chunk_weights *= max_diffs
+
+all_values = chunk_values.sum(axis=0)
+all_weights = jnp.expand_dims(chunk_weights, -1).sum(axis=0)
+all_values / all_weights
+```</pre>
     <p>But <a href="https://arxiv.org/abs/2205.14135">Flash Attention: 2205.14135</a> and <a
         href="https://arxiv.org/abs/2112.05682">Self-attention does not need o(n2) memory:
         2112.05682</a> partitioned the QKV into blocks happened
