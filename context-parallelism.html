@@ -331,7 +331,8 @@
       softmax required sum of exponents on the hidden dimension.</p>
 
     <h3>Blockwise Parallel Transformer for Large Context Models</h3>
-    <p>This paper <a href="https://arxiv.org/pdf/2305.19370">https://arxiv.org/pdf/2305.19370</a> shows that we can
+    <p>This paper <a href="https://arxiv.org/abs/2305.19370">Blockwise Parallel Transformer for Large Context Models:
+        2305.19370</a> shows that we can
       calculate Attention in blockwise manner on multiple devices.</p>
     <p>And this paper also mentioned `Self-attention can be computed in a blockwise manner without materializing the
       softmax
@@ -339,7 +340,8 @@
       matrix` which already done from <a href="https://arxiv.org/abs/2205.14135">Flash Attention: 2205.14135</a> and <a
         href="https://arxiv.org/abs/2112.05682">Self-attention does not need o(n2) memory: 2112.05682</a></p>
     <h4>Flash Attention</h4>
-    <p>"Flash Attention" partitioned QKV into blocks inside the GPU and write in CUDA kernel and optimized the
+    <p><a href="https://arxiv.org/abs/2205.14135">Flash Attention: 2205.14135</a> partitioned QKV into blocks inside the
+      GPU and write in CUDA kernel and optimized the
       movement
       between GPU high bandwidth memory (HBM)
       and GPU on-chip SRAM, become more "io-awareness" by directly manipulating the memory hierarchy using CUDA
@@ -354,9 +356,12 @@
       attention
       minus with global max to get the global attention.</p>
     <h4>Self-attention does not need o(n2) memory</h4>
-    <p>While "Self-attention does not need o(n2) memory" write using Jax to compute the blockwise, it is not as
-      efficient as "Flash Attention" because Jax handled all the memories and there is no interface to make it
-      "io-awareness" like "Flash Attention". The implementation,</p>
+    <p>While <a href="https://arxiv.org/abs/2112.05682">Self-attention does not need o(n2) memory: 2112.05682</a> write
+      using Jax to compute the blockwise, it is not as
+      efficient as <a href="https://arxiv.org/abs/2205.14135">Flash Attention: 2205.14135</a> because Jax handled all
+      the memories and there is no interface to make it
+      "io-awareness" like <a href="https://arxiv.org/abs/2205.14135">Flash Attention: 2205.14135</a>. The
+      implementation,</p>
     <pre>
 ```python
 import functools, jax, math
@@ -436,13 +441,22 @@ def mefficient_attention(query,
       gather local max to get global max and for each local
       attention
       minus with global max to get the global attention.</p>
-    <p>But "Flash Attention" and "Self-attention does not need o(n2) memory" partitioned the QKV into blocks happened
+    <p>But <a href="https://arxiv.org/abs/2205.14135">Flash Attention: 2205.14135</a> and <a
+        href="https://arxiv.org/abs/2112.05682">Self-attention does not need o(n2) memory:
+        2112.05682</a> partitioned the QKV into blocks happened
       inside
-      a single GPU, not for multi-GPUs. And actually, <b>"Blockwise Parallel Transformer for Large Context
-        Models" take inspiration directly from "Self-attention does not need o(n2) memory"</b>, but just do it on
+      a single GPU, not for multi-GPUs.</p>
+    <p>And actually, <a href="https://arxiv.org/abs/2305.19370">Blockwise Parallel Transformer for Large Context Models:
+        2305.19370</a> take inspiration directly from <a href="https://arxiv.org/abs/2112.05682">Self-attention does not
+        need
+        o(n2) memory: 2112.05682</a></b>, but just do it on
       multi-GPUs level.</p>
-    <p>In section 3, it stated Q can split into Bq blocks, and KV split into Bkv blocks, same as "Flash Attention" and
-      "Self-attention does not need o(n2) memory".</p>
+
+    <h4>Blockwise Parallel Transformer for Large Context Models, Section 3</h4>
+    <p>In section 3, it stated Q can split into Bq blocks, and KV split into Bkv blocks, same as <a
+        href="https://arxiv.org/abs/2205.14135">Flash Attention: 2205.14135</a> and
+      <a href="https://arxiv.org/abs/2112.05682">Self-attention does not need o(n2) memory: 2112.05682</a>.
+    </p>
     <p>- 1. For each query block, the blockwise attention Attention(Qi, Kj, Vj) can be computed by iterating over all
       key-value
       blocks,</p>
@@ -668,7 +682,8 @@ tensor([122,  84,  27,  20,  98,  60,  36,  65,  39,  48,  31,  91,  48,  69,
         104, 121, 103, 123,   0,  56,  67, 104], device='cuda:0')
 ```</pre>
     <p>You can continue to run for Q blocks or Bq blocks. <b>As you can see, this blockwise is exactly as
-        "Self-attention does not need o(n2) memory", just in PyTorch.</b></p>
+        <a href="https://arxiv.org/abs/2112.05682">Self-attention does not need o(n2) memory: 2112.05682</a>, just in
+        PyTorch.</b></p>
 
 
     <h3>Use PyTorch distributed</h3>
