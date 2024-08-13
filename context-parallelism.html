@@ -339,7 +339,7 @@
       partitions into multi GPUs.</p>
     <p>This Attention in partition manner or blocks called Blockwise Attention by the paper.</p>
     <p>In section 3, it stated Q can split into Bq blocks, and KV split into Bkv blocks.</p>
-    <p>For each query block, the blockwise attention Attention(Qi, Kj, Vj) can be computed by iterating over all
+    <p>- 1. For each query block, the blockwise attention Attention(Qi, Kj, Vj) can be computed by iterating over all
       key-value
       blocks,</p>
 
@@ -348,7 +348,7 @@
       \mathrm{Attention}(Q_i, K, V) = \mathrm{Scaling}(\{\exp(Q_i K_j^T)V_j\}_{j=1}^{B_{kv}})
       $$
     </div>
-    <p>The scaling operation scales each blockwise attention based on the difference between the blockwise
+    <p>- 2. The scaling operation scales each blockwise attention based on the difference between the blockwise
       maximum and the global maximum.</p>
     <div>
       $$
@@ -362,13 +362,13 @@
       $$
     </div>
 
-    <p>Once the
+    <p>- 3. Once the
       blockwise attention is computed, the global attention matrix can be obtained by scaling the blockwise
       attention using the difference between the blockwise and global softmax normalization constants.</p>
     <div>
       $$
       \mathrm{Attention}(Q_i, K, V) = \bigl[ \exp(Q_i K_j^T - \mathrm{max}_i)~\mathrm{Attention}(Q_i, K_j, V_j)
-      \bigr]_{j=1}^{B_{kv}}.
+      \bigr]_{j=1}^{B_{kv}}
       $$
     </div>
     <p>Visualization to get for Attention(Qi, K, V),</p>
@@ -383,26 +383,26 @@
 
         <!-- K-V blocks -->
         <rect x="100" y="150" width="180" height="60" fill="#99ff99" stroke="#000000" stroke-width="2" />
-        <text x="190" y="185" text-anchor="middle" font-family="Arial, sans-serif" font-size="16">K1, V1</text>
+        <text x="190" y="185" text-anchor="middle" font-family="Arial, sans-serif" font-size="16">K0, V0</text>
 
         <rect x="320" y="150" width="180" height="60" fill="#99ff99" stroke="#000000" stroke-width="2" />
-        <text x="410" y="185" text-anchor="middle" font-family="Arial, sans-serif" font-size="16">K2, V2</text>
+        <text x="410" y="185" text-anchor="middle" font-family="Arial, sans-serif" font-size="16">K1, V1</text>
 
         <!-- Attention computation -->
         <rect x="100" y="250" width="180" height="60" fill="#ffcc00" stroke="#000000" stroke-width="2" />
         <text x="190" y="285" text-anchor="middle" font-family="Arial, sans-serif"
-          font-size="14">Attention(Qi,K1,V1)</text>
+          font-size="14">Attention(Qi,K0,V0)</text>
 
         <rect x="320" y="250" width="180" height="60" fill="#ffcc00" stroke="#000000" stroke-width="2" />
         <text x="410" y="285" text-anchor="middle" font-family="Arial, sans-serif"
-          font-size="14">Attention(Qi,K2,V2)</text>
+          font-size="14">Attention(Qi,K1,V1)</text>
 
         <!-- Max operations -->
         <rect x="100" y="350" width="180" height="60" fill="#ff00ff" stroke="#000000" stroke-width="2" />
-        <text x="190" y="385" text-anchor="middle" font-family="Arial, sans-serif" font-size="14">max(Qi,K1)</text>
+        <text x="190" y="385" text-anchor="middle" font-family="Arial, sans-serif" font-size="14">max(Qi,K0)</text>
 
         <rect x="320" y="350" width="180" height="60" fill="#ff00ff" stroke="#000000" stroke-width="2" />
-        <text x="410" y="385" text-anchor="middle" font-family="Arial, sans-serif" font-size="14">max(Qi,K2)</text>
+        <text x="410" y="385" text-anchor="middle" font-family="Arial, sans-serif" font-size="14">max(Qi,K1)</text>
 
         <!-- Global max -->
         <rect x="210" y="450" width="180" height="60" fill="#ff8000" stroke="#000000" stroke-width="2" />
@@ -410,14 +410,16 @@
 
         <!-- Scaled block attentions -->
         <rect x="100" y="550" width="180" height="60" fill="#00ffff" stroke="#000000" stroke-width="2" />
-        <text x="190" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">exp(max1 -
+        <text x="190" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">exp(QiK0^T -
           global_max)</text>
-        <text x="190" y="595" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">* Attention1</text>
+        <text x="190" y="595" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">*
+          Attention(Qi,K0,V0)</text>
 
         <rect x="320" y="550" width="180" height="60" fill="#00ffff" stroke="#000000" stroke-width="2" />
-        <text x="410" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">exp(max2 -
+        <text x="410" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">exp(QiK1^T -
           global_max)</text>
-        <text x="410" y="595" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">* Attention2</text>
+        <text x="410" y="595" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">*
+          Attention(Qi,K1,V1)</text>
 
         <!-- Final summed attention -->
         <rect x="210" y="650" width="180" height="60" fill="#ff9966" stroke="#000000" stroke-width="2" />
@@ -463,15 +465,31 @@
         <text x="300" y="740" text-anchor="middle" font-family="Arial, sans-serif" font-size="16">Final Output:
           Attention(Qi, K, V)</text>
       </svg>
-      <p>- 1. For Qi, loop for each KV blocks, j,</p>
-      <p>-- i. Calculate maxj = max(QiKj^T) and Attentionj = softmax(QiKj^T - maxj)Vj</p>
-      <p>-- ii. Store maxj in maxi, maxi = [maxj0, maxj1, ...] and Attentionj in Attentioni, Attentioni = [Attentionj0,
-        Attentionj1, ...]</p>
-      <p>- 2. Calculate max_maxi = max(maxi), loop again KV blocks, j,</p>
-      <p>-- i. Calculate blockwisej = exp(QiKj^T - max_maxi) Attentionij, and store it in blockwisei, blockwisei =
-        [blockwisej0, blockwisej1, ...]</p>
-      <p>-- ii. Sum, now you got Attention(Qi,K,V)!</p>
+
     </div>
+    <p>- 1. For Qi, loop for each KV blocks, j,</p>
+    <p>-- i. Calculate maxj = max(QiKj^T) and Attentionj = softmax(QiKj^T - maxj)Vj</p>
+    <p>-- ii. Store maxj in maxi, maxi = [maxj0, maxj1, ...] and Attentionj in Attentioni, Attentioni = [Attentionj0,
+      Attentionj1, ...]</p>
+    <p>- 2. Calculate max_maxi = max(maxi), loop again KV blocks, j,</p>
+    <p>-- i. Calculate blockwisej = exp(QiKj^T - max_maxi) Attentionij, and store it in blockwisei, blockwisei =
+      [blockwisej0, blockwisej1, ...]</p>
+    <p>-- ii. Sum, now you got Attention(Qi,K,V)!</p>
+    <h3>PyTorch code using Loop</h3>
+    <p>To test if it is working, we have to compare by doing full attention vs blockwise attention, after that we
+      compare
+      the full attention on the first partition size with the first blockwise attention,</p>
+    <h3>Now why it is working?</h3>
+    <h3>Use PyTorch distributed</h3>
+    <p>Because right now we only got 2 machines with each 1 GPU, so we have to do multi-nodes to use 2 GPUs, and we are
+      going to use
+      Ray
+      framework for Torch Elastic Distributed, and we already explained at <a
+        href="https://malaysia-ai.org/2d-parallelism-ray">https://malaysia-ai.org/2d-parallelism-ray</a>, <b>TLDR,
+        basically Ray just a wrapper around Torch Elastic Distributed same like `torchrun` command.</b></p>
+    <p>Now we have to convert from loop execution to parallel execution using Torch Elastic Distributed, for me, if you
+      want to do parallel execution, at first you must test it using loop execution, if it works, convert it to parallel
+      execution.</p>
 
     <p>---</p>
     <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
