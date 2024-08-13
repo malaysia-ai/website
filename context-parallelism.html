@@ -521,9 +521,10 @@ all_values / all_weights
     <p>- 4. But I believe there is a mistake to calculate <span>\(\mathrm{Attention}(Q_i, K, V)\),</span></p>
     <p>-- i. <span>\(Q_i K_j^T\)</span> shape is [L, L] while <span>\(\mathrm{Attention}(Q_i, K, V)\)</span> shape is
       [L, dim], so we cannot do hadamard product.</p>
-    <p>-- ii. <span>It should be \(\exp(\max(Q_i K_j^T) - \mathrm{max}_i)\), so the shape will become [L]. When we do
-        hadamard product, [L] o [L, dim], PyTorch will automatically repeat [L], [L, L, ...] become [L, dim] then we can
-        do [L, dim] o [L, dim].</span></p>
+    <p>-- ii. It should be <span>\(\exp(\max(Q_i K_j^T) - \mathrm{max}_i)\)</span>, so the shape will become [L].
+      When we do
+      hadamard product, [L] o [L, dim], PyTorch will automatically repeat [L], [L, L, ...] become [L, dim] then we can
+      do [L, dim] o [L, dim].</p>
     <p>--- iii. Actual equation should be, </p>
     <div>
       $$
