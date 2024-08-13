@@ -644,7 +644,7 @@ output = sum(scaled_attentions)
 ```python
 (torch.sign(full_attention[:output.shape[0]]) == torch.sign(output)).float().mean()
 ```</pre>
-    <p>Output,</p>
+    <p>The output,</p>
     <pre>
 ```text
 tensor(0.9958, device='cuda:0')
@@ -675,6 +675,195 @@ tensor([122,  84,  27,  20,  98,  60,  36,  65,  39,  48,  31,  91,  48,  69,
     <p>Now we have to convert from loop execution to parallel execution using Torch Elastic Distributed, for me, if you
       want to do parallel execution, at first you must test it using loop execution, if it works, convert it to parallel
       execution.</p>
+    <pre>
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.distributed as dist
+import os
+
+def main():
+    world_size = torch.cuda.device_count()
+    local_rank = int(os.environ["LOCAL_RANK"])
+    device = f'cuda:{local_rank}'
+    dist.init_process_group(backend='nccl')
+
+    Q_block = torch.randn(50, 128).cuda(device=device).to(torch.bfloat16)
+    K = torch.randn(50, 128).cuda(device=device).to(torch.bfloat16)
+    V = torch.randn(50, 128).cuda(device=device).to(torch.bfloat16)
+
+    block_attentions = []
+    block_maxes = []
+
+    for i in range(world_size):
+        if i == local_rank:
+            dist.broadcast(K, src=i)
+            dist.broadcast(V, src=i)
+
+            K_block = K
+            V_block = V
+        else:
+            K_block = torch.empty_like(K)
+            V_block = torch.empty_like(V)
+
+            dist.broadcast(K_block, src=i)
+            dist.broadcast(V_block, src=i)
+        
+        scores = torch.matmul(Q_block, K_block.T)
+        block_max = scores.max(dim=-1, keepdim=True)[0]
+        block_maxes.append(block_max)
+        block_attention = torch.matmul(F.softmax(scores - block_max, dim=-1), V_block)
+        block_attentions.append(block_attention)
+    
+    global_max = torch.max(torch.cat(block_maxes, dim=-1), dim=-1, keepdim=True)[0]
+
+    scaled_attentions = [
+        torch.exp(block_max - global_max) * block_attention
+        for block_max, block_attention in zip(block_maxes, block_attentions)
+    ]
+
+    output = sum(scaled_attentions)
+    print(local_rank, len(block_maxes), output.shape)
+
+if __name__ == "__main__":
+    main()
+```</pre>
+    <p>Save it as `context-parallelism.py`, and this example required minimum 2 GPUs, and to execute it using
+      `torchrun`,</p>
+    <pre>
+```bash
+torchrun \
+--nproc-per-node=2 \
+context-parallelism.py
+```</pre>
+    <p>The output,</p>
+    <pre>
+```
+0 2 torch.Size([50, 128])
+1 2 torch.Size([50, 128])
+```</pre>
+    <p>For each GPU able to get expected shape which is [50, 128], so the data flow is like,</p>
+    <p>- 1. When we do context parallelism, each QKV blocks already initialized for each GPU, not during GPU 0 after
+      that split to N GPUs, because GPU 0 it self not enough memory to chunks and scatter to N GPUs.</p>
+    <p>- 2. We loop based on world size, if we got 2 GPUs, so the world size 2. If,</p>
+    <p>-- i. If i equal to current device, `i == local_rank`, we have to broadcast KV blocks to other GPUs.</p>
+    <p>-- ii. If i does not equal to current device, it means the local GPU must accept KV blocks from the other GPUs.
+    </p>
+    <p>-- iii. Calculate max(QiKj^T) and store it in block_maxes.</p>
+    <p>-- iv. Calculate softmax(QiKj^T - max(QiKj^T))Vj and store it in block_attentions.</p>
+    <p>- 3. Calculate the global_max from block_maxes.</p>
+    <p>- 4. We iterate for each blocks from zip(block_maxes, block_attentions),</p>
+    <p>-- i. Calculate exp(block_max - global_max) * block_attention and store in scaled_attentions.</p>
+    <p>- 5. Sum scaled_attentions to get the blockwise attention at local GPU.</p>
+    <p>- 6. The data movement is like below,</p>
+    <div style="width: 70%">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1100">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#000" />
+          </marker>
+        </defs>
+
+        <!-- GPU 0 -->
+        <rect x="50" y="50" width="300" height="1000" fill="#e6f3ff" stroke="#000" stroke-width="2" />
+        <text x="200" y="40" text-anchor="middle" font-size="16" font-weight="bold">GPU 0</text>
+
+        <!-- GPU 1 -->
+        <rect x="450" y="50" width="300" height="1000" fill="#fff0e6" stroke="#000" stroke-width="2" />
+        <text x="600" y="40" text-anchor="middle" font-size="16" font-weight="bold">GPU 1</text>
+
+        <!-- Initial Data -->
+        <text x="200" y="80" text-anchor="middle" font-size="14">Q0 K0 V0</text>
+        <text x="600" y="80" text-anchor="middle" font-size="14">Q1 K1 V1</text>
+
+        <!-- Data Broadcasting -->
+        <line x1="200" y1="100" x2="600" y2="100" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="400" y="95" text-anchor="middle" font-size="12">Broadcast K0, V0</text>
+
+        <line x1="600" y1="120" x2="200" y2="120" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="400" y="115" text-anchor="middle" font-size="12">Broadcast K1, V1</text>
+
+        <!-- Block Operations for GPU 0 -->
+        <text x="200" y="150" text-anchor="middle" font-size="14" font-weight="bold">Block Operations (GPU 0)</text>
+
+        <rect x="70" y="170" width="260" height="80" fill="#d1e7ff" stroke="#000" stroke-width="1" />
+        <text x="200" y="190" text-anchor="middle" font-size="12">Block 0 (i == local_rank)</text>
+        <text x="200" y="210" text-anchor="middle" font-size="12">1. scores0 = Q0 * K0^T</text>
+        <text x="200" y="230" text-anchor="middle" font-size="12">2. block_max0 = max(scores0)</text>
+
+        <rect x="70" y="260" width="260" height="100" fill="#d1e7ff" stroke="#000" stroke-width="1" />
+        <text x="200" y="280" text-anchor="middle" font-size="12">Block 1 (i != local_rank)</text>
+        <text x="200" y="300" text-anchor="middle" font-size="12">1. scores1 = Q0 * K1^T</text>
+        <text x="200" y="320" text-anchor="middle" font-size="12">2. block_max1 = max(scores1)</text>
+        <text x="200" y="340" text-anchor="middle" font-size="12">3. Store block_max0, block_max1</text>
+
+        <rect x="70" y="370" width="260" height="120" fill="#d1e7ff" stroke="#000" stroke-width="1" />
+        <text x="200" y="390" text-anchor="middle" font-size="12">Attention Calculation</text>
+        <text x="200" y="410" text-anchor="middle" font-size="12">1. softmax0 = softmax(scores0 - block_max0)</text>
+        <text x="200" y="430" text-anchor="middle" font-size="12">2. attention0 = softmax0 * V0</text>
+        <text x="200" y="450" text-anchor="middle" font-size="12">3. softmax1 = softmax(scores1 - block_max1)</text>
+        <text x="200" y="470" text-anchor="middle" font-size="12">4. attention1 = softmax1 * V1</text>
+
+        <!-- Block Operations for GPU 1 -->
+        <text x="600" y="150" text-anchor="middle" font-size="14" font-weight="bold">Block Operations (GPU 1)</text>
+
+        <rect x="470" y="170" width="260" height="80" fill="#ffd9b3" stroke="#000" stroke-width="1" />
+        <text x="600" y="190" text-anchor="middle" font-size="12">Block 0 (i != local_rank)</text>
+        <text x="600" y="210" text-anchor="middle" font-size="12">1. scores0 = Q1 * K0^T</text>
+        <text x="600" y="230" text-anchor="middle" font-size="12">2. block_max0 = max(scores0)</text>
+
+        <rect x="470" y="260" width="260" height="100" fill="#ffd9b3" stroke="#000" stroke-width="1" />
+        <text x="600" y="280" text-anchor="middle" font-size="12">Block 1 (i == local_rank)</text>
+        <text x="600" y="300" text-anchor="middle" font-size="12">1. scores1 = Q1 * K1^T</text>
+        <text x="600" y="320" text-anchor="middle" font-size="12">2. block_max1 = max(scores1)</text>
+        <text x="600" y="340" text-anchor="middle" font-size="12">3. Store block_max0, block_max1</text>
+
+        <rect x="470" y="370" width="260" height="120" fill="#ffd9b3" stroke="#000" stroke-width="1" />
+        <text x="600" y="390" text-anchor="middle" font-size="12">Attention Calculation</text>
+        <text x="600" y="410" text-anchor="middle" font-size="12">1. softmax0 = softmax(scores0 - block_max0)</text>
+        <text x="600" y="430" text-anchor="middle" font-size="12">2. attention0 = softmax0 * V0</text>
+        <text x="600" y="450" text-anchor="middle" font-size="12">3. softmax1 = softmax(scores1 - block_max1)</text>
+        <text x="600" y="470" text-anchor="middle" font-size="12">4. attention1 = softmax1 * V1</text>
+
+        <!-- Global Max Calculation -->
+        <rect x="70" y="510" width="260" height="60" fill="#d1e7ff" stroke="#000" stroke-width="1" />
+        <text x="200" y="535" text-anchor="middle" font-size="12">Calculate global_max0 from</text>
+        <text x="200" y="555" text-anchor="middle" font-size="12">local block_max0, block_max1</text>
+
+        <rect x="470" y="510" width="260" height="60" fill="#ffd9b3" stroke="#000" stroke-width="1" />
+        <text x="600" y="535" text-anchor="middle" font-size="12">Calculate global_max1 from</text>
+        <text x="600" y="555" text-anchor="middle" font-size="12">local block_max0, block_max1</text>
+
+        <!-- Scaled Attentions -->
+        <rect x="70" y="590" width="260" height="140" fill="#d1e7ff" stroke="#000" stroke-width="1" />
+        <text x="200" y="630" text-anchor="middle" font-size="12">1. scale0 = exp(block_max0 - global_max0)</text>
+        <text x="200" y="650" text-anchor="middle" font-size="12">2. scale1 = exp(block_max1 - global_max0)</text>
+        <text x="200" y="670" text-anchor="middle" font-size="12">3. scaled_attention0 = scale0 * attention0</text>
+        <text x="200" y="690" text-anchor="middle" font-size="12">4. scaled_attention1 = scale1 * attention1</text>
+
+        <rect x="470" y="590" width="260" height="140" fill="#ffd9b3" stroke="#000" stroke-width="1" />
+        <text x="600" y="630" text-anchor="middle" font-size="12">1. scale0 = exp(block_max0 - global_max1)</text>
+        <text x="600" y="650" text-anchor="middle" font-size="12">2. scale1 = exp(block_max1 - global_max1)</text>
+        <text x="600" y="670" text-anchor="middle" font-size="12">3. scaled_attention0 = scale0 * attention0</text>
+        <text x="600" y="690" text-anchor="middle" font-size="12">4. scaled_attention1 = scale1 * attention1</text>
+
+        <!-- Final Sum -->
+        <rect x="70" y="750" width="260" height="60" fill="#d1e7ff" stroke="#000" stroke-width="1" />
+
+        <text x="200" y="790" text-anchor="middle" font-size="12">output0 = scaled_attention0 + scaled_attention1</text>
+
+        <rect x="470" y="750" width="260" height="60" fill="#ffd9b3" stroke="#000" stroke-width="1" />
+
+        <text x="600" y="790" text-anchor="middle" font-size="12">output1 = scaled_attention0 + scaled_attention1</text>
+
+        <!-- Continue Processing -->
+        <text x="400" y="840" text-anchor="middle" font-size="14" font-weight="bold">Continue downstream
+          processing</text>
+        <line x1="200" y1="860" x2="200" y2="1020" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+        <line x1="600" y1="860" x2="600" y2="1020" stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" />
+      </svg>
+    </div>
 
     <h3>Improvement</h3>
     <p><a href="https://arxiv.org/abs/2310.01889">Ring Attention: 2310.01889</a> from the same authors to improve this
