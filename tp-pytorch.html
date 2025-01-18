@@ -12,7 +12,7 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="Malaysia-AI blog Tensor Parallelism PyTorch">
   <meta property="og:description" content="Malaysia-AI blog Tensor Parallelism PyTorch">
-  <meta property="og:image" content="https://malaysia-ai.org/tp-pytorch.png">
+  <meta property="og:image" content="https://malaysia-ai.org/images/tp-pytorch.png">
 
   <!-- Twitter Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
@@ -20,7 +20,7 @@
   <meta property="twitter:url" content="https://malaysia-ai.org/tp-pytorch">
   <meta name="twitter:title" content="Malaysia-AI blog Tensor Parallelism PyTorch">
   <meta name="twitter:description" content="Malaysia-AI blog Tensor Parallelism PyTorch">
-  <meta name="twitter:image" content="https://malaysia-ai.org/tp-pytorch.png">
+  <meta name="twitter:image" content="https://malaysia-ai.org/images/tp-pytorch.png">
 
   <!-- Meta Tags Generated via https://www.opengraph.xyz -->
 
@@ -51,7 +51,7 @@
     <h2>Tensor Parallelism PyTorch</h2>
     <p>Deep learning is getting bigger especially for Language Model, and the relationship between performance vs size
       already explained in <a href="https://arxiv.org/abs/2001.08361">kaplan2020scalinglawsneurallanguage</a>,</p>
-    <img src="/kaplan2020scalinglawsneurallanguage-fig1.png" width="80%">
+    <img src="/images/kaplan2020scalinglawsneurallanguage-fig1.png" width="80%">
     <p>The more compute, more data, more parameters you have, the better the performance in term of perplexity.</p>
     <p>And when GPT-3 released, which is 175B parameters, it changed the world. From the paper <a
         href="https://arxiv.org/abs/2005.14165">brown2020languagemodelsfewshotlearners</a>, basically if you scaled
@@ -61,7 +61,7 @@
       mid-finetuning, post-finetuning).</p>
     <p>Now 175B is huge, the paper released in 2020, and 175B is insane even nowadays is still considered insanely
       large. GPT-3 trained on V100, mentioned in the paper section 2.3,</p>
-    <img src="/kaplan2020scalinglawsneurallanguage-2.3.png" width="80%">
+    <img src="/images/kaplan2020scalinglawsneurallanguage-2.3.png" width="80%">
     <p>V100 is best for single-precision, which is 32 bit, assumed if the model saved in float32, 4 bytes, 175B * 4
       bytes ~= 652 GB!</p>
     <p>For V100, the biggest GPU memory is 32GB, 652GB / 32 = 21 GPUs! So you need at least 21 units of V100 32GB VRAM
@@ -851,8 +851,6 @@ tensor([[ 0.3327,  0.5701,  1.2123,  ..., -0.2698,  0.1395, -0.3736],
           (32x50)</text>
       </svg>
     </div>
-    <p>---</p>
-    <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
   </div>
 </body>
 

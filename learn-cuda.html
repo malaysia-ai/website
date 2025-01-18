@@ -1,63 +1,73 @@
 <html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- HTML Meta Tags -->
+    <title>Malaysia-AI blog learn CUDA</title>
+    <meta name="description" content="Malaysia-AI blog learn CUDA" />
 
-<head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- HTML Meta Tags -->
-  <title>Malaysia-AI blog learn CUDA</title>
-  <meta name="description" content="Malaysia-AI blog learn CUDA">
+    <!-- Facebook Meta Tags -->
+    <meta property="og:url" content="https://malaysia-ai.org/learn-cuda" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Malaysia-AI blog learn CUDA" />
+    <meta property="og:description" content="Malaysia-AI blog learn CUDA" />
+    <meta
+      property="og:image"
+      content="https://malaysia-ai.org/images/learn-cuda.png"
+    />
 
-  <!-- Facebook Meta Tags -->
-  <meta property="og:url" content="https://malaysia-ai.org/learn-cuda">
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Malaysia-AI blog learn CUDA">
-  <meta property="og:description" content="Malaysia-AI blog learn CUDA">
-  <meta property="og:image" content="https://malaysia-ai.org/learn-cuda.png">
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta property="twitter:domain" content="malaysia-ai.org" />
+    <meta property="twitter:url" content="https://malaysia-ai.org/learn-cuda" />
+    <meta name="twitter:title" content="Malaysia-AI blog learn CUDA" />
+    <meta name="twitter:description" content="Malaysia-AI blog learn CUDA" />
+    <meta
+      name="twitter:image"
+      content="https://malaysia-ai.org/images/learn-cuda.png"
+    />
 
-  <!-- Twitter Meta Tags -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta property="twitter:domain" content="malaysia-ai.org">
-  <meta property="twitter:url" content="https://malaysia-ai.org/learn-cuda">
-  <meta name="twitter:title" content="Malaysia-AI blog learn CUDA">
-  <meta name="twitter:description" content="Malaysia-AI blog learn CUDA">
-  <meta name="twitter:image" content="https://malaysia-ai.org/learn-cuda.png">
+    <!-- Meta Tags Generated via https://www.opengraph.xyz -->
 
-  <!-- Meta Tags Generated via https://www.opengraph.xyz -->
+    <style>
+      body {
+        line-height: 1.4;
+        font-size: 16px;
+        padding: 0 10px;
+        margin: 50px auto;
+        max-width: 1000px;
+      }
 
-  <style>
-    body {
-      line-height: 1.4;
-      font-size: 16px;
-      padding: 0 10px;
-      margin: 50px auto;
-      max-width: 1000px;
-    }
+      #maincontent {
+        max-width: 62em;
+        margin: 15 auto;
+      }
 
-    #maincontent {
-      max-width: 62em;
-      margin: 15 auto;
-    }
+      pre {
+        margin-top: 0px;
+        white-space: break-spaces;
+      }
+    </style>
+  </head>
 
-    pre {
-      margin-top: 0px;
-      white-space: break-spaces;
-    }
-  </style>
-</head>
+  <body>
+    <div id="maincontent" style="margin-top: 70px">
+      <h2>learn CUDA</h2>
 
-<body>
-
-  <div id="maincontent" style="margin-top: 70px">
-    <h2>learn CUDA</h2>
-
-    <p>CUDA is hard to learn to be honest, and if you read <a
-        href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/">https://docs.nvidia.com/cuda/cuda-c-programming-guide/</a>,
-      things can be complicated, which is true, CUDA is complicated.
-    </p>
-    <p>That guide is good actually, but if you are totally new, nothing you can run there, for example from <a
-        href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/#kernels">https://docs.nvidia.com/cuda/cuda-c-programming-guide/#kernels</a>,
-    </p>
-    <pre>
+      <p>
+        CUDA is hard to learn to be honest, and if you read
+        <a href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/"
+          >https://docs.nvidia.com/cuda/cuda-c-programming-guide/</a
+        >, things can be complicated, which is true, CUDA is complicated.
+      </p>
+      <p>
+        That guide is good actually, but if you are totally new, nothing you can
+        run there, for example from
+        <a href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/#kernels"
+          >https://docs.nvidia.com/cuda/cuda-c-programming-guide/#kernels</a
+        >,
+      </p>
+      <pre>
 ```cuda
 // Kernel definition
 __global__ void VecAdd(float* A, float* B, float* C)
@@ -74,9 +84,10 @@ int main()
     ...
 }
 ```
-    </pre>
-    <p>So, let's try to complete it,</p>
-    <pre>
+    </pre
+      >
+      <p>So, let's try to complete it,</p>
+      <pre>
 ```cuda
 #include &lt;stdio.h&gt;
 #include &lt;cuda_runtime.h&gt;
@@ -124,29 +135,46 @@ int main()
     free(h_a); free(h_b); free(h_c);
     cudaFree(d_a); cudaFree(d_b); cudaFree(d_c);
 }
-```</pre>
-    <p>Save it as `test.cu`, and then you can continue to compile,</p>
-    <pre>
+```</pre
+      >
+      <p>Save it as `test.cu`, and then you can continue to compile,</p>
+      <pre>
 ```bash
 nvcc test.cu -o test
 ./test
-```</pre>
-    <p>Others are just standard C++ operations, we are only going to focus for CUDA extensions only,</p>
-    <p>1. for `VecAdd<<<1, N>>>`, first parameter `1`, this means, 1 block allocated only.</p>
-    <p>2. for `VecAdd<<<1, N>>>`, second parameter `N`, this means, N thread allocated in 1 block.</p>
-    <p>3. A thread is to execute one operation, plus, minus, etc. 1000000 threads means 1000000 operations can be done
-      simultaneously, logically, but physically not.</p>
-    <p>4. For those experienced in CUDA, 1000000 threads in a single block is no-brainer and the code is not going to
-      work as intended, here is why,</p>
-    <pre>
+```</pre
+      >
+      <p>
+        Others are just standard C++ operations, we are only going to focus for
+        CUDA extensions only,
+      </p>
+      <p>
+        1. for `VecAdd<<<1, N>>>`, first parameter `1`, this means, 1 block
+        allocated only.
+      </p>
+      <p>
+        2. for `VecAdd<<<1, N>>>`, second parameter `N`, this means, N thread
+        allocated in 1 block.
+      </p>
+      <p>
+        3. A thread is to execute one operation, plus, minus, etc. 1000000
+        threads means 1000000 operations can be done simultaneously, logically,
+        but physically not.
+      </p>
+      <p>
+        4. For those experienced in CUDA, 1000000 threads in a single block is
+        no-brainer and the code is not going to work as intended, here is why,
+      </p>
+      <pre>
 ```bash
 git clone https://github.com/NVIDIA/cuda-samples
 cd cuda-samples/Samples/1_Utilities/deviceQuery
 make
 ./deviceQuery
-```</pre>
-    <p>below is the output,</p>
-    <pre>
+```</pre
+      >
+      <p>below is the output,</p>
+      <pre>
 ```
 Device 0: "NVIDIA GeForce RTX 3090 Ti"
 CUDA Driver Version / Runtime Version          12.5 / 12.1
@@ -185,89 +213,276 @@ Supports MultiDevice Co-op Kernel Launch:      Yes
 Device PCI Domain ID / Bus ID / location ID:   0 / 1 / 0
 Compute Mode:
     < Default (multiple host threads can use ::cudaSetDevice() with device simultaneously) >
-```</pre>
-    <p>Look at,</p>
-    <pre>
+```</pre
+      >
+      <p>Look at,</p>
+      <pre>
 ```
 (084) Multiprocessors, (128) CUDA Cores/MP:    10752 CUDA Cores
 Maximum number of threads per multiprocessor:  1536
 Maximum number of threads per block:           1024
 Max dimension size of a thread block (x,y,z): (1024, 1024, 64)
 Max dimension size of a grid size    (x,y,z): (2147483647, 65535, 65535)
-```</pre>
-    <p>- Max blocks my GPU can initiate is 2147483647 blocks.</p>
-    <p>- Each blocks max 1024 threads.</p>
-    <p>- Each CUDA core max 1536 threads simultaneously only.</p>
-    <p>- 84 multiprocessors, each got 128 CUDA cores.</p>
-    <p>- 10752 * 1536 = 16515072 threads. Back to our 1000000 threads, in order to run these threads simultaneously in
-      most efficient way, we must use blocks.</p>
-    <p>- Why need blocks? it is all about parallelism. If Nvidia designed 1 block N threads instead M blocks N threads,
-    </p>
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
-      <rect x="10" y="10" width="380" height="380" fill="#f0f0f0" stroke="#000000" stroke-width="2" />
-      <rect x="410" y="10" width="380" height="380" fill="#f0f0f0" stroke="#000000" stroke-width="2" />
+```</pre
+      >
+      <p>- Max blocks my GPU can initiate is 2147483647 blocks.</p>
+      <p>- Each blocks max 1024 threads.</p>
+      <p>- Each CUDA core max 1536 threads simultaneously only.</p>
+      <p>- 84 multiprocessors, each got 128 CUDA cores.</p>
+      <p>
+        - 10752 * 1536 = 16515072 threads. Back to our 1000000 threads, in order
+        to run these threads simultaneously in most efficient way, we must use
+        blocks.
+      </p>
+      <p>
+        - Why need blocks? it is all about parallelism. If Nvidia designed 1
+        block N threads instead M blocks N threads,
+      </p>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+        <rect
+          x="10"
+          y="10"
+          width="380"
+          height="380"
+          fill="#f0f0f0"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <rect
+          x="410"
+          y="10"
+          width="380"
+          height="380"
+          fill="#f0f0f0"
+          stroke="#000000"
+          stroke-width="2"
+        />
 
-      <!-- Single Block -->
-      <rect x="20" y="20" width="360" height="360" fill="#a0c8e0" stroke="#000000" stroke-width="2" />
-      <text x="200" y="200" text-anchor="middle" font-size="24" font-weight="bold">Single Block</text>
-      <text x="200" y="230" text-anchor="middle" font-size="18">1024 Threads</text>
+        <!-- Single Block -->
+        <rect
+          x="20"
+          y="20"
+          width="360"
+          height="360"
+          fill="#a0c8e0"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text
+          x="200"
+          y="200"
+          text-anchor="middle"
+          font-size="24"
+          font-weight="bold"
+        >
+          Single Block
+        </text>
+        <text x="200" y="230" text-anchor="middle" font-size="18">
+          1024 Threads
+        </text>
 
-      <!-- Multiple Blocks -->
-      <rect x="420" y="20" width="175" height="175" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <rect x="605" y="20" width="175" height="175" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <rect x="420" y="205" width="175" height="175" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <rect x="605" y="205" width="175" height="175" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <text x="600" y="200" text-anchor="middle" font-size="24" font-weight="bold">Multiple Blocks</text>
-      <text x="600" y="230" text-anchor="middle" font-size="18">4 x 256 Threads</text>
+        <!-- Multiple Blocks -->
+        <rect
+          x="420"
+          y="20"
+          width="175"
+          height="175"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <rect
+          x="605"
+          y="20"
+          width="175"
+          height="175"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <rect
+          x="420"
+          y="205"
+          width="175"
+          height="175"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <rect
+          x="605"
+          y="205"
+          width="175"
+          height="175"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text
+          x="600"
+          y="200"
+          text-anchor="middle"
+          font-size="24"
+          font-weight="bold"
+        >
+          Multiple Blocks
+        </text>
+        <text x="600" y="230" text-anchor="middle" font-size="18">
+          4 x 256 Threads
+        </text>
+      </svg>
+      <p style="font-size: 10px">Generated by Claude Sonnet 3.5</p>
+      <p>
+        -- In Nvidia, there is a term called `Streaming Multiprocessors (SM)` to
+        do parallel computation, physically is the count of Multiprocessors,
+        based on `DeviceQuery`, I got `(084) Multiprocessors`, 84 SMs can run in
+        parallel.
+      </p>
+      <p>
+        -- If we use 1 block only, nothing can be split among SMs, SMs
+        distributed like below,
+      </p>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+        <rect
+          x="10"
+          y="10"
+          width="780"
+          height="380"
+          fill="#f0f0f0"
+          stroke="#000000"
+          stroke-width="2"
+        />
 
-    </svg>
-    <p style="font-size: 10px;">Generated by Claude Sonnet 3.5</p>
-    <p>-- In Nvidia, there is a term called `Streaming Multiprocessors (SM)` to do parallel computation, physically is
-      the count of Multiprocessors, based on `DeviceQuery`, I got `(084) Multiprocessors`, 84 SMs can run in parallel.
-    </p>
-    <p>-- If we use 1 block only, nothing can be split among SMs, SMs distributed like below,</p>
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
-      <rect x="10" y="10" width="780" height="380" fill="#f0f0f0" stroke="#000000" stroke-width="2" />
+        <!-- GPU -->
+        <text
+          x="400"
+          y="40"
+          text-anchor="middle"
+          font-size="24"
+          font-weight="bold"
+        >
+          GPU
+        </text>
 
-      <!-- GPU -->
-      <text x="400" y="40" text-anchor="middle" font-size="24" font-weight="bold">GPU</text>
+        <!-- SMs -->
+        <rect
+          x="30"
+          y="60"
+          width="220"
+          height="300"
+          fill="#a0c8e0"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="140" y="85" text-anchor="middle" font-size="18">SM 1</text>
 
-      <!-- SMs -->
-      <rect x="30" y="60" width="220" height="300" fill="#a0c8e0" stroke="#000000" stroke-width="2" />
-      <text x="140" y="85" text-anchor="middle" font-size="18">SM 1</text>
+        <rect
+          x="290"
+          y="60"
+          width="220"
+          height="300"
+          fill="#a0c8e0"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="400" y="85" text-anchor="middle" font-size="18">SM 2</text>
 
-      <rect x="290" y="60" width="220" height="300" fill="#a0c8e0" stroke="#000000" stroke-width="2" />
-      <text x="400" y="85" text-anchor="middle" font-size="18">SM 2</text>
+        <rect
+          x="550"
+          y="60"
+          width="220"
+          height="300"
+          fill="#a0c8e0"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="660" y="85" text-anchor="middle" font-size="18">SM 3</text>
 
-      <rect x="550" y="60" width="220" height="300" fill="#a0c8e0" stroke="#000000" stroke-width="2" />
-      <text x="660" y="85" text-anchor="middle" font-size="18">SM 3</text>
+        <!-- Blocks -->
+        <rect
+          x="40"
+          y="100"
+          width="90"
+          height="70"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="85" y="140" text-anchor="middle" font-size="14">Block 1</text>
 
-      <!-- Blocks -->
-      <rect x="40" y="100" width="90" height="70" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <text x="85" y="140" text-anchor="middle" font-size="14">Block 1</text>
+        <rect
+          x="150"
+          y="100"
+          width="90"
+          height="70"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="195" y="140" text-anchor="middle" font-size="14">Block 2</text>
 
-      <rect x="150" y="100" width="90" height="70" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <text x="195" y="140" text-anchor="middle" font-size="14">Block 2</text>
+        <rect
+          x="40"
+          y="190"
+          width="90"
+          height="70"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="85" y="230" text-anchor="middle" font-size="14">Block 3</text>
 
-      <rect x="40" y="190" width="90" height="70" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <text x="85" y="230" text-anchor="middle" font-size="14">Block 3</text>
+        <rect
+          x="300"
+          y="100"
+          width="90"
+          height="70"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="345" y="140" text-anchor="middle" font-size="14">Block 4</text>
 
-      <rect x="300" y="100" width="90" height="70" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <text x="345" y="140" text-anchor="middle" font-size="14">Block 4</text>
+        <rect
+          x="410"
+          y="100"
+          width="90"
+          height="70"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="455" y="140" text-anchor="middle" font-size="14">Block 5</text>
 
-      <rect x="410" y="100" width="90" height="70" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <text x="455" y="140" text-anchor="middle" font-size="14">Block 5</text>
+        <rect
+          x="560"
+          y="100"
+          width="90"
+          height="70"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="605" y="140" text-anchor="middle" font-size="14">Block 6</text>
 
-      <rect x="560" y="100" width="90" height="70" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <text x="605" y="140" text-anchor="middle" font-size="14">Block 6</text>
-
-      <rect x="670" y="100" width="90" height="70" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <text x="715" y="140" text-anchor="middle" font-size="14">Block 7</text>
-    </svg>
-    <p style="font-size: 10px;">Generated by Claude Sonnet 3.5</p>
-    <p>5. Physically limit 1024 threads for each block, if we initiated beyond the physically limit, like 1000000
-      threads, CUDA will not execute the kernel. You can use CUDA debugger,</p>
-    <pre>
+        <rect
+          x="670"
+          y="100"
+          width="90"
+          height="70"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="715" y="140" text-anchor="middle" font-size="14">Block 7</text>
+      </svg>
+      <p style="font-size: 10px">Generated by Claude Sonnet 3.5</p>
+      <p>
+        5. Physically limit 1024 threads for each block, if we initiated beyond
+        the physically limit, like 1000000 threads, CUDA will not execute the
+        kernel. You can use CUDA debugger,
+      </p>
+      <pre>
 ```bash
 nvcc -G -g -o test test.cu
 cuda-gdb test
@@ -282,9 +497,10 @@ run
 [New Thread 0x7fa4cbfff000 (LWP 140208)]
 [New Thread 0x7fa4cb7fe000 (LWP 140209)]
 warning: Cuda API error detected: cudaLaunchKernel returned (0x9)
-```</pre>
-    <p>So to fix this, use multiple blocks!</p>
-    <pre>
+```</pre
+      >
+      <p>So to fix this, use multiple blocks!</p>
+      <pre>
 ```cuda
 #include &lt;stdio.h&gt;
 #include &lt;cuda_runtime.h&gt;
@@ -343,15 +559,20 @@ int main()
     
     return 0;
 }
-```</pre>
-    <p>Save it as `test-fix.cu`, and then you can continue to compile,</p>
-    <pre>
+```</pre
+      >
+      <p>Save it as `test-fix.cu`, and then you can continue to compile,</p>
+      <pre>
 ```bash
 nvcc test-fix.cu -o test-fix
 ./test-fix
-```</pre>
-    <p>If the values are not consistent, it will hit the `printf` and early break. How about the debugger?</p>
-    <pre>
+```</pre
+      >
+      <p>
+        If the values are not consistent, it will hit the `printf` and early
+        break. How about the debugger?
+      </p>
+      <pre>
 ```bash
 nvcc -G -g -o test-fix test-fix.cu
 cuda-gdb test-fix
@@ -369,80 +590,304 @@ run
 
 Thread 1 "test-fix" hit Breakpoint 1, VecAdd<<<(10,1,1),(1024,1,1)>>> (A=0x7fd4b3a00000, B=0x7fd4b3a0a000, C=0x7fd4b3a14000) at test-fix.cu:7
 7           int i = blockDim.x * blockIdx.x + threadIdx.x;
-```</pre>
-    <p>Safely executed, the kernel invocation must be `VecAdd&lt;&lt;&lt;blocksPerGrid, threadsPerBlock>>>`, where
-      `threadsPerBlock
-      =
-      1024` and `blocksPerGrid = (N + threadsPerBlock - 1) / threadsPerBlock` to make sure `N` partitioned nicely,
-      1000000 // 1024 = 978 blocks.
-    </p>
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
-      <rect x="10" y="10" width="780" height="380" fill="#f0f0f0" stroke="#000000" stroke-width="2" />
+```</pre
+      >
+      <p>
+        Safely executed, the kernel invocation must be
+        `VecAdd&lt;&lt;&lt;blocksPerGrid, threadsPerBlock>>>`, where
+        `threadsPerBlock = 1024` and `blocksPerGrid = (N + threadsPerBlock - 1)
+        / threadsPerBlock` to make sure `N` partitioned nicely, 1000000 // 1024
+        = 978 blocks.
+      </p>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+        <rect
+          x="10"
+          y="10"
+          width="780"
+          height="380"
+          fill="#f0f0f0"
+          stroke="#000000"
+          stroke-width="2"
+        />
 
-      <!-- Abstract Multiple Blocks -->
-      <rect x="20" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <rect x="80" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <rect x="140" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <rect x="200" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <rect x="260" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <rect x="320" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <rect x="380" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <rect x="440" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <rect x="500" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <rect x="560" y="20" width="50" height="50" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
+        <!-- Abstract Multiple Blocks -->
+        <rect
+          x="20"
+          y="20"
+          width="50"
+          height="50"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <rect
+          x="80"
+          y="20"
+          width="50"
+          height="50"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <rect
+          x="140"
+          y="20"
+          width="50"
+          height="50"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <rect
+          x="200"
+          y="20"
+          width="50"
+          height="50"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <rect
+          x="260"
+          y="20"
+          width="50"
+          height="50"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <rect
+          x="320"
+          y="20"
+          width="50"
+          height="50"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <rect
+          x="380"
+          y="20"
+          width="50"
+          height="50"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <rect
+          x="440"
+          y="20"
+          width="50"
+          height="50"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <rect
+          x="500"
+          y="20"
+          width="50"
+          height="50"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <rect
+          x="560"
+          y="20"
+          width="50"
+          height="50"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
 
-      <text x="400" y="200" text-anchor="middle" font-size="24" font-weight="bold">Multiple Blocks</text>
-      <text x="400" y="230" text-anchor="middle" font-size="18">978 x 1024 Threads</text>
+        <text
+          x="400"
+          y="200"
+          text-anchor="middle"
+          font-size="24"
+          font-weight="bold"
+        >
+          Multiple Blocks
+        </text>
+        <text x="400" y="230" text-anchor="middle" font-size="18">
+          978 x 1024 Threads
+        </text>
+      </svg>
+      <p style="font-size: 10px">Generated by Claude Sonnet 3.5</p>
+      <p>
+        I did not visualized all the 978 blocks, but you got the gist. How about
+        `blockDim.x * blockIdx.x + threadIdx.x` in the kernel?
+      </p>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
+        <rect
+          x="10"
+          y="10"
+          width="980"
+          height="580"
+          fill="#f0f0f0"
+          stroke="#000000"
+          stroke-width="2"
+        />
 
-    </svg>
-    <p style="font-size: 10px;">Generated by Claude Sonnet 3.5</p>
-    <p>I did not visualized all the 978 blocks, but you got the gist. How about `blockDim.x * blockIdx.x + threadIdx.x`
-      in
-      the kernel?</p>
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
-      <rect x="10" y="10" width="980" height="580" fill="#f0f0f0" stroke="#000000" stroke-width="2" />
+        <!-- Block 0 -->
+        <rect
+          x="20"
+          y="20"
+          width="220"
+          height="220"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text
+          x="130"
+          y="260"
+          text-anchor="middle"
+          font-size="16"
+          font-weight="bold"
+        >
+          Block 0 (blockIdx.x = 0)
+        </text>
 
-      <!-- Block 0 -->
-      <rect x="20" y="20" width="220" height="220" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <text x="130" y="260" text-anchor="middle" font-size="16" font-weight="bold">Block 0 (blockIdx.x = 0)</text>
+        <!-- Threads in Block 0 -->
+        <rect
+          x="30"
+          y="30"
+          width="50"
+          height="50"
+          fill="#c8e0a0"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="55" y="60" text-anchor="middle" font-size="12">
+          threadIdx.x=0
+        </text>
+        <rect
+          x="120"
+          y="30"
+          width="50"
+          height="50"
+          fill="#c8e0a0"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="150" y="60" text-anchor="middle" font-size="12">
+          threadIdx.x=1
+        </text>
 
-      <!-- Threads in Block 0 -->
-      <rect x="30" y="30" width="50" height="50" fill="#c8e0a0" stroke="#000000" stroke-width="2" />
-      <text x="55" y="60" text-anchor="middle" font-size="12">threadIdx.x=0</text>
-      <rect x="120" y="30" width="50" height="50" fill="#c8e0a0" stroke="#000000" stroke-width="2" />
-      <text x="150" y="60" text-anchor="middle" font-size="12">threadIdx.x=1</text>
+        <!-- Block 1 -->
+        <rect
+          x="260"
+          y="20"
+          width="220"
+          height="220"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text
+          x="370"
+          y="260"
+          text-anchor="middle"
+          font-size="16"
+          font-weight="bold"
+        >
+          Block 1 (blockIdx.x = 1)
+        </text>
 
-      <!-- Block 1 -->
-      <rect x="260" y="20" width="220" height="220" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <text x="370" y="260" text-anchor="middle" font-size="16" font-weight="bold">Block 1 (blockIdx.x = 1)</text>
+        <!-- Threads in Block 1 -->
+        <rect
+          x="270"
+          y="30"
+          width="50"
+          height="50"
+          fill="#c8e0a0"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="295" y="60" text-anchor="middle" font-size="12">
+          threadIdx.x=0
+        </text>
+        <rect
+          x="360"
+          y="30"
+          width="50"
+          height="50"
+          fill="#c8e0a0"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="390" y="60" text-anchor="middle" font-size="12">
+          threadIdx.x=1
+        </text>
 
-      <!-- Threads in Block 1 -->
-      <rect x="270" y="30" width="50" height="50" fill="#c8e0a0" stroke="#000000" stroke-width="2" />
-      <text x="295" y="60" text-anchor="middle" font-size="12">threadIdx.x=0</text>
-      <rect x="360" y="30" width="50" height="50" fill="#c8e0a0" stroke="#000000" stroke-width="2" />
-      <text x="390" y="60" text-anchor="middle" font-size="12">threadIdx.x=1</text>
+        <!-- Block 2 -->
+        <rect
+          x="500"
+          y="20"
+          width="220"
+          height="220"
+          fill="#a0e0c8"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text
+          x="610"
+          y="260"
+          text-anchor="middle"
+          font-size="16"
+          font-weight="bold"
+        >
+          Block 2 (blockIdx.x = 2)
+        </text>
 
-      <!-- Block 2 -->
-      <rect x="500" y="20" width="220" height="220" fill="#a0e0c8" stroke="#000000" stroke-width="2" />
-      <text x="610" y="260" text-anchor="middle" font-size="16" font-weight="bold">Block 2 (blockIdx.x = 2)</text>
+        <!-- Threads in Block 2 -->
+        <rect
+          x="510"
+          y="30"
+          width="50"
+          height="50"
+          fill="#c8e0a0"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="535" y="60" text-anchor="middle" font-size="12">
+          threadIdx.x=0
+        </text>
+        <rect
+          x="600"
+          y="30"
+          width="50"
+          height="50"
+          fill="#c8e0a0"
+          stroke="#000000"
+          stroke-width="2"
+        />
+        <text x="630" y="60" text-anchor="middle" font-size="12">
+          threadIdx.x=1
+        </text>
 
-      <!-- Threads in Block 2 -->
-      <rect x="510" y="30" width="50" height="50" fill="#c8e0a0" stroke="#000000" stroke-width="2" />
-      <text x="535" y="60" text-anchor="middle" font-size="12">threadIdx.x=0</text>
-      <rect x="600" y="30" width="50" height="50" fill="#c8e0a0" stroke="#000000" stroke-width="2" />
-      <text x="630" y="60" text-anchor="middle" font-size="12">threadIdx.x=1</text>
+        <!-- Example Calculation -->
+        <text x="130" y="350" font-size="16" font-weight="bold">
+          Example Calculation
+        </text>
+        <text x="130" y="380" font-size="14">
+          For Block 1, threadIdx.x = 2:
+        </text>
+        <text x="130" y="410" font-size="14">
+          Global Index = blockDim.x * blockIdx.x + threadIdx.x
+        </text>
+        <text x="130" y="440" font-size="14">= 1024 * 1 + 2 = 1026</text>
+      </svg>
+      <p style="font-size: 10px">Generated by Claude Sonnet 3.5</p>
 
-      <!-- Example Calculation -->
-      <text x="130" y="350" font-size="16" font-weight="bold">Example Calculation</text>
-      <text x="130" y="380" font-size="14">For Block 1, threadIdx.x = 2:</text>
-      <text x="130" y="410" font-size="14">Global Index = blockDim.x * blockIdx.x + threadIdx.x</text>
-      <text x="130" y="440" font-size="14">= 1024 * 1 + 2 = 1026</text>
-
-    </svg>
-    <p style="font-size: 10px;">Generated by Claude Sonnet 3.5</p>
-
-    <p>6. To test it run in parallel or not, you can put `printf` in the kernel,</p>
-    <pre>
+      <p>
+        6. To test it run in parallel or not, you can put `printf` in the
+        kernel,
+      </p>
+      <pre>
 ```cuda
 __global__ void VecAdd(float* A, float* B, float* C)
 {
@@ -479,16 +924,20 @@ __global__ void VecAdd(float* A, float* B, float* C)
 109
 110
 111
-```</pre>
-    <p>You can see that `i` printed in the kernel are not in the order.</p>
-    <p>7. Actually you can use `VecAdd<<<1, N>>>(d_a, d_b, d_c)` 1 block as long N is less than physical thread size,
-        which is if you follow `blockDim.x * blockIdx.x + threadIdx.x`, `blockDim.x * blockIdx.x` is 0 because
-        `blockIdx.x` is 0.</p>
-    <p>8. If you understand `blockDim`, `blockIdx`, `threadIdx`, and pointers, you are good to go, CUDA already put a
-      lot of abstractions for us to write CUDA programming.</p>
-    <p>---</p>
-    <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
-  </div>
-</body>
-
+```</pre
+      >
+      <p>You can see that `i` printed in the kernel are not in the order.</p>
+      <p>
+        7. Actually you can use `VecAdd<<<1, N>>>(d_a, d_b, d_c)` 1 block as
+        long N is less than physical thread size, which is if you follow
+        `blockDim.x * blockIdx.x + threadIdx.x`, `blockDim.x * blockIdx.x` is 0
+        because `blockIdx.x` is 0.
+      </p>
+      <p>
+        8. If you understand `blockDim`, `blockIdx`, `threadIdx`, and pointers,
+        you are good to go, CUDA already put a lot of abstractions for us to
+        write CUDA programming.
+      </p>
+    </div>
+  </body>
 </html>

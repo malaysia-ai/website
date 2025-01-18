@@ -1,64 +1,97 @@
 <html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- HTML Meta Tags -->
+    <title>Malaysia-AI blog multi-nodes GPUs Ray serving</title>
+    <meta
+      name="description"
+      content="Malaysia-AI blog multi-nodes GPUs Ray serving"
+    />
 
-<head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- HTML Meta Tags -->
-  <title>Malaysia-AI blog multi-nodes GPUs Ray serving</title>
-  <meta name="description" content="Malaysia-AI blog multi-nodes GPUs Ray serving">
+    <!-- Facebook Meta Tags -->
+    <meta
+      property="og:url"
+      content="https://malaysia-ai.org/multinode-ray-serving"
+    />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="Malaysia-AI blog multi-nodes GPUs Ray serving"
+    />
+    <meta
+      property="og:description"
+      content="Malaysia-AI blog multi-nodes GPUs Ray serving"
+    />
+    <meta
+      property="og:image"
+      content="https://malaysia-ai.org/images/multinode-ray-serving.png"
+    />
 
-  <!-- Facebook Meta Tags -->
-  <meta property="og:url" content="https://malaysia-ai.org/multinode-ray-serving">
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Malaysia-AI blog multi-nodes GPUs Ray serving">
-  <meta property="og:description" content="Malaysia-AI blog multi-nodes GPUs Ray serving">
-  <meta property="og:image" content="https://malaysia-ai.org/multinode-ray-serving.png">
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta property="twitter:domain" content="malaysia-ai.org" />
+    <meta
+      property="twitter:url"
+      content="https://malaysia-ai.org/multinode-ray-serving"
+    />
+    <meta
+      name="twitter:title"
+      content="Malaysia-AI blog multi-nodes GPUs Ray serving"
+    />
+    <meta
+      name="twitter:description"
+      content="Malaysia-AI blog multi-nodes GPUs Ray serving"
+    />
+    <meta
+      name="twitter:image"
+      content="https://malaysia-ai.org/images/multinode-ray-serving.png"
+    />
 
-  <!-- Twitter Meta Tags -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta property="twitter:domain" content="malaysia-ai.org">
-  <meta property="twitter:url" content="https://malaysia-ai.org/multinode-ray-serving">
-  <meta name="twitter:title" content="Malaysia-AI blog multi-nodes GPUs Ray serving">
-  <meta name="twitter:description" content="Malaysia-AI blog multi-nodes GPUs Ray serving">
-  <meta name="twitter:image" content="https://malaysia-ai.org/multinode-ray-serving.png">
+    <!-- Meta Tags Generated via https://www.opengraph.xyz -->
 
-  <!-- Meta Tags Generated via https://www.opengraph.xyz -->
+    <style>
+      body {
+        line-height: 1.4;
+        font-size: 16px;
+        padding: 0 10px;
+        margin: 50px auto;
+        max-width: 1000px;
+      }
 
-  <style>
-    body {
-      line-height: 1.4;
-      font-size: 16px;
-      padding: 0 10px;
-      margin: 50px auto;
-      max-width: 1000px;
-    }
+      #maincontent {
+        max-width: 62em;
+        margin: 15 auto;
+      }
+    </style>
+  </head>
 
-    #maincontent {
-      max-width: 62em;
-      margin: 15 auto;
-    }
-  </style>
-</head>
+  <body>
+    <div id="maincontent" style="margin-top: 70px">
+      <h2>multi-nodes GPUs Ray serving</h2>
 
-<body>
-
-  <div id="maincontent" style="margin-top: 70px">
-    <h2>multi-nodes GPUs Ray serving</h2>
-
-    <p>Turns out, to serve a model on different N machines is super simple using Ray, just make sure all machines
-      already installed Ray, and 1 machine run as head and another machines run as workers,</p>
-    <p style="margin-bottom:0px">For head,</p>
-    <pre style="margin-top:0px; white-space:break-spaces;">
+      <p>
+        Turns out, to serve a model on different N machines is super simple
+        using Ray, just make sure all machines already installed Ray, and 1
+        machine run as head and another machines run as workers,
+      </p>
+      <p style="margin-bottom: 0px">For head,</p>
+      <pre style="margin-top: 0px; white-space: break-spaces">
 ```bash
 ray start --head --port=6379 --dashboard-host=0.0.0.0
-```</pre>
-    <p style="margin-bottom:0px">For worker,</p>
-    <pre style="margin-top:0px; white-space:break-spaces;">
+```</pre
+      >
+      <p style="margin-bottom: 0px">For worker,</p>
+      <pre style="margin-top: 0px; white-space: break-spaces">
 ```bash
 ray start --address=HEAD_NODE_IP:6379
-```</pre>
-    <p style="margin-bottom:0px">After that you can just start with `serve.deployment` with custom `__init__`,</p>
-    <pre style="white-space:break-spaces;">
+```</pre
+      >
+      <p style="margin-bottom: 0px">
+        After that you can just start with `serve.deployment` with custom
+        `__init__`,
+      </p>
+      <pre style="white-space: break-spaces">
 ```python
 import requests
 from starlette.requests import Request
@@ -87,28 +120,46 @@ print(
         "http://localhost:8000/", params={"text": "Ray Serve is great!"} 
     ).json() 
 )
-```</pre>
-    <p>1. The head will pickled the object and send to it to each replicas.</p>
-    <p>2. To have multiple replica sets, use the argument `num_replicas` in the master node.</p>
-    <p>3. The replicas can be the head itself and the workers.</p>
-    <p>4. The code execution can be anywhere, not necessary inside the head, but the default ray serve connect to
-      `localhost:6379`.</p>
-    <p>5. The master node needs to run on a linux based operating system.</p>
-    <p>6. The master node needs to use the argument `ray_actor_options` to allow ray to utilise the GPU on the master
-      node.
-    </p>
-    <h3>How to make it better?</h3>
-    <p>If you look at the source code, we are serving Encoder-Decoder model, which is Flan T5 Large.</p>
-    <p>When we talk about Encoder-Decoder model, the causal happened on Decoder side, and inferencing causal just a
-      continuous loop until reached max length or EOS token.</p>
-    <p>Serving like this, it is not efficient for concurrency because GPUs are designed to perform same operation on a
-      batch manner, plus too much processing switching happened between for different requests.</p>
-    <p>So what we need to do is to micro-batch the requests, but the micro-batch must happened during causal loop, this
-      called continuous batching.</p>
-    <br>
-    <p>---</p>
-    <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
-  </div>
-</body>
-
+```</pre
+      >
+      <p>
+        1. The head will pickled the object and send to it to each replicas.
+      </p>
+      <p>
+        2. To have multiple replica sets, use the argument `num_replicas` in the
+        master node.
+      </p>
+      <p>3. The replicas can be the head itself and the workers.</p>
+      <p>
+        4. The code execution can be anywhere, not necessary inside the head,
+        but the default ray serve connect to `localhost:6379`.
+      </p>
+      <p>5. The master node needs to run on a linux based operating system.</p>
+      <p>
+        6. The master node needs to use the argument `ray_actor_options` to
+        allow ray to utilise the GPU on the master node.
+      </p>
+      <h3>How to make it better?</h3>
+      <p>
+        If you look at the source code, we are serving Encoder-Decoder model,
+        which is Flan T5 Large.
+      </p>
+      <p>
+        When we talk about Encoder-Decoder model, the causal happened on Decoder
+        side, and inferencing causal just a continuous loop until reached max
+        length or EOS token.
+      </p>
+      <p>
+        Serving like this, it is not efficient for concurrency because GPUs are
+        designed to perform same operation on a batch manner, plus too much
+        processing switching happened between for different requests.
+      </p>
+      <p>
+        So what we need to do is to micro-batch the requests, but the
+        micro-batch must happened during causal loop, this called continuous
+        batching.
+      </p>
+      <br />
+    </div>
+  </body>
 </html>

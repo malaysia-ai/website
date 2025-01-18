@@ -12,7 +12,7 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="Malaysia-AI blog Context Parallelism">
   <meta property="og:description" content="Malaysia-AI blog Context Parallelism">
-  <meta property="og:image" content="https://malaysia-ai.org/context-parallelism.png">
+  <meta property="og:image" content="https://malaysia-ai.org/images/context-parallelism.png">
 
   <!-- Twitter Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
@@ -20,7 +20,7 @@
   <meta property="twitter:url" content="https://malaysia-ai.org/context-parallelism">
   <meta name="twitter:title" content="Malaysia-AI blog Context Parallelismh">
   <meta name="twitter:description" content="Malaysia-AI blog Context Parallelism">
-  <meta name="twitter:image" content="https://malaysia-ai.org/context-parallelism.png">
+  <meta name="twitter:image" content="https://malaysia-ai.org/images/context-parallelism.png">
 
   <!-- Meta Tags Generated via https://www.opengraph.xyz -->
 
@@ -348,9 +348,9 @@
       interface. Flash Attention also
       calculate the attention using blockwise manner
       inside CUDA blocks.</p>
-    <img src="/flash-attention.png" width="40%">
+    <img src="/images/flash-attention.png" width="40%">
     <br>
-    <img src="/flash-attention-1.png" width="40%">
+    <img src="/images/flash-attention-1.png" width="40%">
     <p>- As you can see there are outer and inner loops, defined as, loop for each KV blocks, nested loop for each Q
       blocks, and calculate local max and local attention, gather local max to get global max and for each local
       attention
@@ -915,9 +915,6 @@ context-parallelism.py
       Blockwise Attention by simply reduce the communication between nodes by using ring communication.</p>
     <p>And recently there is <a href="https://arxiv.org/abs/2408.04093">Tree Attention: 2408.04093</a> to improve Ring
       Attention by aggregating the max(KV.T) on tree hierarchy, which is only make sense for multi-nodes.</p>
-
-    <p>---</p>
-    <p>thats all, give some love to <a href="https://x.com/aisyahhhrzk" target="_blank">Aisyah Razak.</a></p>
   </div>
 </body>
 
