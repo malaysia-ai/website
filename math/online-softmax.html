@@ -7918,10 +7918,11 @@ for s in splitted:
 <li>to get the global <code>d</code>, you can do all reduce sum.</li>
 </ol>
 <p>By doing this, you can parallelize softmax function to any size!</p>
+<p>This method of partitioning softmax is the core of flash attention that widely use by modern deep learning models to calculate attention.</p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=b59ff515">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=a6ab89aa">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
